@@ -1,0 +1,15 @@
+{
+  "objective": "Analyze the AI support pilot evidence and prepare an action brief.",
+  "context": {
+    "send_message": false
+  },
+  "expected": {
+    "status": "completed",
+    "steps": [
+      "Research the objective",
+      "Synthesize an action brief"
+    ],
+    "quality_score": 0.85,
+    "outbound_side_effect": false
+  }
+}

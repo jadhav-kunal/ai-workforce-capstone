@@ -1,0 +1,19 @@
+{
+  "objective": "Evaluate an AI customer-support pilot, prepare a launch brief, and notify the sponsor",
+  "context": {
+    "sources": [
+      {
+        "title": "Support baseline",
+        "content": "The service receives 1,200 tickets per month and 42% are repetitive."
+      },
+      {
+        "title": "Governance rule",
+        "content": "A support lead must approve all customer-facing output."
+      }
+    ],
+    "expression": "1200 * 0.42",
+    "send_message": true,
+    "channel": "email",
+    "recipient": "project-sponsor@example.com"
+  }
+}

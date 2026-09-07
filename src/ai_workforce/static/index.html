@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AI Workforce operations console">
+  <title>AI Workforce — Operations Console</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="noise"></div>
+  <header>
+    <a class="brand" href="/" aria-label="AI Workforce home">
+      <span class="brand-mark">AW</span>
+      <span>AI Workforce</span>
+    </a>
+    <div class="system-state"><i></i> SYSTEM ONLINE</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">AUTONOMOUS OPERATIONS / CONTROL PLANE</p>
+        <h1>Delegate outcomes.<br><em>Keep control.</em></h1>
+        <p class="lede">A 24/7 team of specialized agents that researches, plans, executes, and learns—with a human checkpoint where it matters.</p>
+      </div>
+      <div class="metrics" id="metrics" aria-label="Workforce metrics">
+        <div><span id="metric-runs">0</span><small>TOTAL RUNS</small></div>
+        <div><span id="metric-success">0%</span><small>SUCCESS RATE</small></div>
+        <div><span id="metric-lessons">0</span><small>LESSONS</small></div>
+      </div>
+    </section>
+
+    <section class="command-panel">
+      <div class="panel-label"><span>01</span> NEW DELEGATION</div>
+      <form id="run-form">
+        <label for="objective">What outcome should the workforce deliver?</label>
+        <textarea id="objective" required minlength="3" placeholder="Research three launch risks, prepare an action brief, and send the recommendation to the project sponsor.">Research the opportunity for an AI support assistant, identify launch risks, prepare an action brief, and send it to the project sponsor.</textarea>
+        <div class="form-row">
+          <label class="switch"><input id="send-message" type="checkbox" checked><span></span> Include stakeholder update</label>
+          <button type="submit"><span>Deploy workforce</span><b>→</b></button>
+        </div>
+      </form>
+    </section>
+
+    <section class="workspace">
+      <div class="runs-column">
+        <div class="section-head">
+          <h2>Run log</h2>
+          <button class="quiet" id="refresh">Refresh</button>
+        </div>
+        <div id="runs" class="run-list"><p class="empty">No runs yet. Delegate an outcome above.</p></div>
+      </div>
+      <aside class="detail-column" id="detail">
+        <div class="empty-detail">
+          <span>⌁</span>
+          <h3>Select a run</h3>
+          <p>Inspect the plan, agent trace, tool outputs, and approval decisions.</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer><span>CAPSTONE / v1.0.0</span><span>LOCAL-FIRST · AUDITABLE · HUMAN-GOVERNED</span></footer>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
