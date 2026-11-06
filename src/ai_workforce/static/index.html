@@ -35,7 +35,24 @@
       <div class="panel-label"><span>01</span> NEW DELEGATION</div>
       <form id="run-form">
         <label for="objective">What outcome should the workforce deliver?</label>
-        <textarea id="objective" required minlength="3" placeholder="Research three launch risks, prepare an action brief, and send the recommendation to the project sponsor.">Research the opportunity for an AI support assistant, identify launch risks, prepare an action brief, and send it to the project sponsor.</textarea>
+        <textarea id="objective" required minlength="3" placeholder="Research three launch risks, prepare an action brief, and send the recommendation to the project sponsor.">Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.</textarea>
+        <details class="demo-inputs" open>
+          <summary>Evidence and calculation inputs</summary>
+          <div class="input-grid">
+            <label for="sources">Source passages <small>One per line: title | passage</small>
+              <textarea id="sources" placeholder="Support baseline | The team receives 1,200 tickets per month.">Support baseline | The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.
+Pilot constraint | Any customer-facing output must be reviewed by a support lead.</textarea>
+            </label>
+            <div>
+              <label for="expression">Calculation <small>Basic arithmetic only</small>
+                <input id="expression" value="1200 * 0.42" placeholder="1200 * 0.42">
+              </label>
+              <label for="recipient">Simulated recipient
+                <input id="recipient" type="email" value="project-sponsor@example.com" placeholder="project-sponsor@example.com">
+              </label>
+            </div>
+          </div>
+        </details>
         <div class="form-row">
           <label class="switch"><input id="send-message" type="checkbox" checked><span></span> Include stakeholder update</label>
           <button type="submit"><span>Deploy workforce</span><b>→</b></button>

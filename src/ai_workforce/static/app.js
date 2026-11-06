@@ -1,4 +1,4 @@
-const state = { selected: null, poll: null };
+const state = { selected: new URLSearchParams(window.location.search).get('run'), poll: null };
 const $ = (selector) => document.querySelector(selector);
 
 async function api(path, options = {}) {
@@ -14,6 +14,14 @@ function toast(message) {
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+}
+
+function parseSources(value) {
+  return value.split('\n').map(line => line.trim()).filter(Boolean).map((line, index) => {
+    const separator = line.indexOf('|');
+    if (separator < 0) return { title: `Source ${index + 1}`, content: line };
+    return { title: line.slice(0, separator).trim(), content: line.slice(separator + 1).trim() };
+  });
 }
 
 async function loadMetrics() {
@@ -38,6 +46,7 @@ async function loadRuns() {
 
 async function selectRun(id) {
   state.selected = id;
+  window.history.replaceState(null, '', `?run=${encodeURIComponent(id)}`);
   await loadRuns();
   const run = await api(`/api/runs/${id}`);
   renderDetail(run);
@@ -53,17 +62,31 @@ function renderDetail(run) {
       <div><h4>${esc(step.title)}</h4><p>${esc(step.agent)} · ${esc(step.tool)} · ${esc(step.risk)} risk</p></div>
     </div>`).join('');
   const approval = waiting ? `<div class="approval"><p><strong>Human decision required.</strong><br>This step creates an external-facing artifact in the simulated outbox.</p><button data-approve="true">Approve & continue</button><button class="reject" data-approve="false">Reject</button></div>` : '';
-  const result = run.result ? `<div class="result"><h4>Quality review · ${Math.round(run.result.review.quality_score * 100)}%</h4><p>${esc(run.result.review.reflection)}</p><pre>${esc(JSON.stringify(run.result.artifacts, null, 2))}</pre></div>` : (run.error ? `<div class="result"><h4>Run error</h4><p>${esc(run.error)}</p></div>` : '');
+  const calculation = run.result?.artifacts?.find(item => Object.hasOwn(item, 'value'));
+  const research = run.result?.artifacts?.find(item => item.findings);
+  const message = run.result?.artifacts?.find(item => item.message);
+  const evidence = research?.findings?.map((item, index) => `<li><b>S${index + 1}</b> ${esc(item.title)}</li>`).join('') || '';
+  const result = run.result ? `<div class="result">
+    <div class="result-head"><h4>Verified run result</h4><strong>${Math.round(run.result.review.quality_score * 100)}% structural score</strong></div>
+    <div class="result-grid">
+      <div><small>EVIDENCE</small><b>${research?.source_count || 0} supplied passages</b>${evidence ? `<ul>${evidence}</ul>` : ''}</div>
+      <div><small>CALCULATION</small><b>${calculation ? `${esc(calculation.expression)} = ${esc(calculation.value)}` : 'Not requested'}</b></div>
+      <div><small>POLICY OUTCOME</small><b>${message ? `Approved · ${esc(message.message.delivery)} only` : 'No outbound artifact'}</b></div>
+    </div>
+    <p>${esc(run.result.review.reflection)}</p>
+    <details><summary>Exact artifact JSON</summary><pre>${esc(JSON.stringify(run.result.artifacts, null, 2))}</pre></details>
+  </div>` : (run.error ? `<div class="result"><h4>Run error</h4><p>${esc(run.error)}</p></div>` : '');
+  const events = run.events?.length ? `<details class="events"><summary>Audit event history · ${run.events.length} events</summary><ol>${run.events.map(event => `<li><time>${esc(new Date(event.created_at).toLocaleTimeString())}</time><b>${esc(event.type)}</b><span>${esc(event.actor)}</span></li>`).join('')}</ol></details>` : '';
   $('#detail').innerHTML = `
     <div class="detail-top"><div><span class="run-id">${esc(run.id)}</span><h3>${esc(run.objective)}</h3></div><span class="badge ${esc(run.status)}">${esc(run.status.replace('_',' '))}</span></div>
-    <div class="timeline">${plan || '<p class="empty">Planning…</p>'}</div>${approval}${result}`;
+    <div class="timeline">${plan || '<p class="empty">Planning…</p>'}</div>${approval}${result}${events}`;
   document.querySelectorAll('[data-approve]').forEach(button => button.addEventListener('click', () => resolveApproval(run.id, waiting.id, button.dataset.approve === 'true')));
 }
 
 async function resolveApproval(runId, stepId, approved) {
   try {
-    const run = await api(`/api/runs/${runId}/approval`, { method:'POST', body:JSON.stringify({ step_id:stepId, approved }) });
-    renderDetail(run); await Promise.all([loadRuns(), loadMetrics()]); toast(approved ? 'Action approved and completed' : 'Action rejected');
+    await api(`/api/runs/${runId}/approval`, { method:'POST', body:JSON.stringify({ step_id:stepId, approved }) });
+    await Promise.all([loadRuns(), loadMetrics()]); await selectRun(runId); toast(approved ? 'Action approved and completed' : 'Action rejected');
   } catch (error) { toast(error.message); }
 }
 
@@ -73,9 +96,19 @@ $('#run-form').addEventListener('submit', async event => {
   event.preventDefault();
   const button = event.currentTarget.querySelector('button'); button.disabled = true;
   try {
-    const run = await api('/api/runs', { method:'POST', body:JSON.stringify({ objective:$('#objective').value, context:{ send_message:$('#send-message').checked } }) });
+    const expression = $('#expression').value.trim();
+    const context = {
+      send_message: $('#send-message').checked,
+      sources: parseSources($('#sources').value),
+      recipient: $('#recipient').value.trim() || 'project-sponsor@example.com',
+      channel: 'email'
+    };
+    if (expression) context.expression = expression;
+    const run = await api('/api/runs', { method:'POST', body:JSON.stringify({ objective:$('#objective').value, context }) });
     toast('Workforce deployed'); await loadMetrics(); await selectRun(run.id);
   } catch (error) { toast(error.message); } finally { button.disabled = false; }
 });
 $('#refresh').addEventListener('click', () => Promise.all([loadRuns(), loadMetrics()]));
-Promise.all([loadRuns(), loadMetrics()]).catch(error => toast(error.message));
+Promise.all([loadRuns(), loadMetrics()])
+  .then(() => state.selected && selectRun(state.selected))
+  .catch(error => toast(error.message));

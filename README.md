@@ -78,6 +78,32 @@ The screenshots are also available as standalone submission artifacts:
 - [`artifacts/evidence/baseline-success.png`](artifacts/evidence/baseline-success.png)
 - [`artifacts/evidence/baseline-result.png`](artifacts/evidence/baseline-result.png)
 
+## Current verification evidence
+
+The dashboard now accepts supplied source passages, an optional arithmetic expression, and a
+simulated recipient. The current deterministic verification run used two source passages,
+calculated `1200 * 0.42 = 504`, paused before the high-risk message step, and wrote exactly one
+local outbox artifact after approval.
+
+![Current run waiting for exact-step approval](artifacts/evidence/current-waiting-approval.png)
+
+![Current completed result with evidence, calculation, and policy outcome](artifacts/evidence/current-completed-result.png)
+
+Run the five-scenario evidence suite with:
+
+```bash
+python scripts/collect_evidence.py
+```
+
+The generated evidence is stored in:
+
+- [`artifacts/evidence/CURRENT_SYSTEM_RESULTS.md`](artifacts/evidence/CURRENT_SYSTEM_RESULTS.md)
+- [`artifacts/evidence/current-system-results.json`](artifacts/evidence/current-system-results.json)
+
+The suite covers a grounded brief, exact-step approval, rejection without a side effect, blocked
+code-like arithmetic, and lesson reuse. It runs with the deterministic demo provider and does not
+claim live-model quality or production message delivery.
+
 ## Quick start
 
 ### Requirements

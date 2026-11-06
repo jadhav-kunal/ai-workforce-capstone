@@ -1,0 +1,1633 @@
+{
+  "generated_at": "2026-11-06T16:26:12Z",
+  "environment": {
+    "python": "3.9.6",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "commit": "eb7677c30a076fc599eda74df585949bf958a1e0",
+    "working_tree_changes": [
+      " M README.md",
+      " M src/ai_workforce/static/app.js",
+      " M src/ai_workforce/static/index.html",
+      " M src/ai_workforce/static/styles.css",
+      " M tests/test_api.py",
+      "?? artifacts/evidence/CURRENT_SYSTEM_RESULTS.md",
+      "?? artifacts/evidence/current-completed-result.png",
+      "?? artifacts/evidence/current-system-results.json",
+      "?? artifacts/evidence/current-waiting-approval.png",
+      "?? docs/GITHUB_ISSUE_DRAFTS.md",
+      "?? scripts/"
+    ],
+    "provider": "demo"
+  },
+  "metrics": {
+    "scenario_pass_rate": "5/5",
+    "unauthorized_action_rate": "0/2 (0%)",
+    "approved_action_outbox_entries": "1/1",
+    "calculation_result": "1200 * 0.42 = 504.0",
+    "median_local_latency_ms": 20.501,
+    "trace_available_for_every_scenario": true
+  },
+  "scenarios": [
+    {
+      "id": "S1",
+      "name": "Grounded brief",
+      "passed": true,
+      "latency_ms": 18.567,
+      "run": {
+        "id": "run_5a56c9201132",
+        "objective": "Analyze the AI support pilot evidence and prepare an action brief.",
+        "status": "completed",
+        "created_at": "2026-11-06T16:26:12.363261+00:00",
+        "updated_at": "2026-11-06T16:26:12.379832+00:00",
+        "context": {
+          "sources": [
+            {
+              "title": "Support baseline",
+              "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests."
+            },
+            {
+              "title": "Pilot constraint",
+              "content": "Any customer-facing output must be reviewed by a support lead."
+            }
+          ],
+          "send_message": false,
+          "delegation": {
+            "objective": "Analyze the AI support pilot evidence and prepare an action brief.",
+            "strategy": "research -> synthesize -> act -> reflect",
+            "prior_lessons": []
+          }
+        },
+        "plan": [
+          {
+            "title": "Research the objective",
+            "agent": "researcher",
+            "tool": "knowledge.search",
+            "instruction": "Collect the relevant evidence supplied with the objective.",
+            "risk": "low",
+            "id": "step_706a3f8f04d6",
+            "status": "completed",
+            "output": {
+              "findings": [
+                {
+                  "title": "Support baseline",
+                  "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                  "url": null
+                },
+                {
+                  "title": "Pilot constraint",
+                  "content": "Any customer-facing output must be reviewed by a support lead.",
+                  "url": null
+                }
+              ],
+              "source_count": 2
+            }
+          },
+          {
+            "title": "Synthesize an action brief",
+            "agent": "writer",
+            "tool": "content.synthesize",
+            "instruction": "Create an evidence-linked executive brief with recommendations.",
+            "risk": "low",
+            "id": "step_08b48616a2e7",
+            "status": "completed",
+            "output": {
+              "deliverable": {
+                "title": "Action brief: Analyze the AI support pilot evidence and prepare an action brief.",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Support baseline",
+                  "Pilot constraint"
+                ]
+              }
+            }
+          }
+        ],
+        "result": {
+          "summary": "All delegated tasks completed successfully.",
+          "artifacts": [
+            {
+              "findings": [
+                {
+                  "title": "Support baseline",
+                  "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                  "url": null
+                },
+                {
+                  "title": "Pilot constraint",
+                  "content": "Any customer-facing output must be reviewed by a support lead.",
+                  "url": null
+                }
+              ],
+              "source_count": 2
+            },
+            {
+              "deliverable": {
+                "title": "Action brief: Analyze the AI support pilot evidence and prepare an action brief.",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Support baseline",
+                  "Pilot constraint"
+                ]
+              }
+            }
+          ],
+          "review": {
+            "quality_score": 0.85,
+            "reflection": "Evidence was synthesized around review, objective, execution, analyze, support. The recommended response prioritizes a measurable outcome, explicit ownership, and a human checkpoint before external action.",
+            "lesson_saved": "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication.",
+            "checks": {
+              "has_evidence": true,
+              "all_steps_completed": true,
+              "external_action_guarded": true
+            }
+          }
+        },
+        "error": null,
+        "events": [
+          {
+            "id": 1,
+            "type": "run.created",
+            "actor": "user",
+            "payload": {
+              "objective": "Analyze the AI support pilot evidence and prepare an action brief."
+            },
+            "created_at": "2026-11-06T16:26:12.364767+00:00"
+          },
+          {
+            "id": 2,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.367133+00:00"
+          },
+          {
+            "id": 3,
+            "type": "plan.created",
+            "actor": "planner",
+            "payload": {
+              "steps": [
+                {
+                  "title": "Research the objective",
+                  "agent": "researcher",
+                  "tool": "knowledge.search",
+                  "instruction": "Collect the relevant evidence supplied with the objective.",
+                  "risk": "low",
+                  "id": "step_706a3f8f04d6",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Synthesize an action brief",
+                  "agent": "writer",
+                  "tool": "content.synthesize",
+                  "instruction": "Create an evidence-linked executive brief with recommendations.",
+                  "risk": "low",
+                  "id": "step_08b48616a2e7",
+                  "status": "pending",
+                  "output": null
+                }
+              ]
+            },
+            "created_at": "2026-11-06T16:26:12.369459+00:00"
+          },
+          {
+            "id": 4,
+            "type": "step.started",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_706a3f8f04d6",
+              "tool": "knowledge.search"
+            },
+            "created_at": "2026-11-06T16:26:12.371570+00:00"
+          },
+          {
+            "id": 5,
+            "type": "step.completed",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_706a3f8f04d6",
+              "output": {
+                "findings": [
+                  {
+                    "title": "Support baseline",
+                    "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                    "url": null
+                  },
+                  {
+                    "title": "Pilot constraint",
+                    "content": "Any customer-facing output must be reviewed by a support lead.",
+                    "url": null
+                  }
+                ],
+                "source_count": 2
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.373602+00:00"
+          },
+          {
+            "id": 6,
+            "type": "step.started",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_08b48616a2e7",
+              "tool": "content.synthesize"
+            },
+            "created_at": "2026-11-06T16:26:12.375799+00:00"
+          },
+          {
+            "id": 7,
+            "type": "step.completed",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_08b48616a2e7",
+              "output": {
+                "deliverable": {
+                  "title": "Action brief: Analyze the AI support pilot evidence and prepare an action brief.",
+                  "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                  "recommendations": [
+                    "Start with a narrow, measurable pilot.",
+                    "Keep a human approval checkpoint for external actions.",
+                    "Review run metrics and captured lessons before scaling."
+                  ],
+                  "evidence_used": [
+                    "Support baseline",
+                    "Pilot constraint"
+                  ]
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.377771+00:00"
+          },
+          {
+            "id": 8,
+            "type": "run.completed",
+            "actor": "manager",
+            "payload": {
+              "review": {
+                "quality_score": 0.85,
+                "reflection": "Evidence was synthesized around review, objective, execution, analyze, support. The recommended response prioritizes a measurable outcome, explicit ownership, and a human checkpoint before external action.",
+                "lesson_saved": "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication.",
+                "checks": {
+                  "has_evidence": true,
+                  "all_steps_completed": true,
+                  "external_action_guarded": true
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.380872+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S2",
+      "name": "Calculation and exact-step approval",
+      "passed": true,
+      "latency_ms_excluding_human_wait": 33.417,
+      "calculation": {
+        "expression": "1200 * 0.42",
+        "value": 504.0
+      },
+      "outbox_count_before_approval": 0,
+      "outbox_count_after_approval": 1,
+      "before_approval": {
+        "id": "run_390a29549260",
+        "objective": "Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.",
+        "status": "waiting_approval",
+        "created_at": "2026-11-06T16:26:12.382713+00:00",
+        "updated_at": "2026-11-06T16:26:12.401002+00:00",
+        "context": {
+          "sources": [
+            {
+              "title": "Support baseline",
+              "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests."
+            },
+            {
+              "title": "Pilot constraint",
+              "content": "Any customer-facing output must be reviewed by a support lead."
+            }
+          ],
+          "expression": "1200 * 0.42",
+          "send_message": true,
+          "channel": "email",
+          "recipient": "project-sponsor@example.com",
+          "delegation": {
+            "objective": "Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.",
+            "strategy": "research -> synthesize -> act -> reflect",
+            "prior_lessons": [
+              "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication."
+            ]
+          }
+        },
+        "plan": [
+          {
+            "title": "Research the objective",
+            "agent": "researcher",
+            "tool": "knowledge.search",
+            "instruction": "Collect the relevant evidence supplied with the objective.",
+            "risk": "low",
+            "id": "step_a3293ed0f58a",
+            "status": "completed",
+            "output": {
+              "findings": [
+                {
+                  "title": "Support baseline",
+                  "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                  "url": null
+                },
+                {
+                  "title": "Pilot constraint",
+                  "content": "Any customer-facing output must be reviewed by a support lead.",
+                  "url": null
+                }
+              ],
+              "source_count": 2
+            }
+          },
+          {
+            "title": "Calculate requested metric",
+            "agent": "analyst",
+            "tool": "data.calculate",
+            "instruction": "Calculate the numeric input using the sandboxed arithmetic tool.",
+            "risk": "low",
+            "id": "step_9abd5da9284b",
+            "status": "completed",
+            "output": {
+              "expression": "1200 * 0.42",
+              "value": 504.0
+            }
+          },
+          {
+            "title": "Synthesize an action brief",
+            "agent": "writer",
+            "tool": "content.synthesize",
+            "instruction": "Create an evidence-linked executive brief with recommendations.",
+            "risk": "low",
+            "id": "step_51b4a0050838",
+            "status": "completed",
+            "output": {
+              "deliverable": {
+                "title": "Action brief: Evaluate the AI support assistant pilot, calculate impact, and notify th",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Support baseline",
+                  "Pilot constraint"
+                ]
+              }
+            }
+          },
+          {
+            "title": "Queue the stakeholder update",
+            "agent": "operator",
+            "tool": "app.message",
+            "instruction": "Prepare the stakeholder message and place it in the simulated outbox.",
+            "risk": "high",
+            "id": "step_baf42ba0b0ae",
+            "status": "waiting_approval",
+            "output": null
+          }
+        ],
+        "result": null,
+        "error": null,
+        "events": [
+          {
+            "id": 9,
+            "type": "run.created",
+            "actor": "user",
+            "payload": {
+              "objective": "Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor."
+            },
+            "created_at": "2026-11-06T16:26:12.383526+00:00"
+          },
+          {
+            "id": 10,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.385332+00:00"
+          },
+          {
+            "id": 11,
+            "type": "plan.created",
+            "actor": "planner",
+            "payload": {
+              "steps": [
+                {
+                  "title": "Research the objective",
+                  "agent": "researcher",
+                  "tool": "knowledge.search",
+                  "instruction": "Collect the relevant evidence supplied with the objective.",
+                  "risk": "low",
+                  "id": "step_a3293ed0f58a",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Calculate requested metric",
+                  "agent": "analyst",
+                  "tool": "data.calculate",
+                  "instruction": "Calculate the numeric input using the sandboxed arithmetic tool.",
+                  "risk": "low",
+                  "id": "step_9abd5da9284b",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Synthesize an action brief",
+                  "agent": "writer",
+                  "tool": "content.synthesize",
+                  "instruction": "Create an evidence-linked executive brief with recommendations.",
+                  "risk": "low",
+                  "id": "step_51b4a0050838",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Queue the stakeholder update",
+                  "agent": "operator",
+                  "tool": "app.message",
+                  "instruction": "Prepare the stakeholder message and place it in the simulated outbox.",
+                  "risk": "high",
+                  "id": "step_baf42ba0b0ae",
+                  "status": "pending",
+                  "output": null
+                }
+              ]
+            },
+            "created_at": "2026-11-06T16:26:12.387809+00:00"
+          },
+          {
+            "id": 12,
+            "type": "step.started",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_a3293ed0f58a",
+              "tool": "knowledge.search"
+            },
+            "created_at": "2026-11-06T16:26:12.389785+00:00"
+          },
+          {
+            "id": 13,
+            "type": "step.completed",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_a3293ed0f58a",
+              "output": {
+                "findings": [
+                  {
+                    "title": "Support baseline",
+                    "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                    "url": null
+                  },
+                  {
+                    "title": "Pilot constraint",
+                    "content": "Any customer-facing output must be reviewed by a support lead.",
+                    "url": null
+                  }
+                ],
+                "source_count": 2
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.391674+00:00"
+          },
+          {
+            "id": 14,
+            "type": "step.started",
+            "actor": "analyst",
+            "payload": {
+              "step_id": "step_9abd5da9284b",
+              "tool": "data.calculate"
+            },
+            "created_at": "2026-11-06T16:26:12.393692+00:00"
+          },
+          {
+            "id": 15,
+            "type": "step.completed",
+            "actor": "analyst",
+            "payload": {
+              "step_id": "step_9abd5da9284b",
+              "output": {
+                "expression": "1200 * 0.42",
+                "value": 504.0
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.395667+00:00"
+          },
+          {
+            "id": 16,
+            "type": "step.started",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_51b4a0050838",
+              "tool": "content.synthesize"
+            },
+            "created_at": "2026-11-06T16:26:12.398128+00:00"
+          },
+          {
+            "id": 17,
+            "type": "step.completed",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_51b4a0050838",
+              "output": {
+                "deliverable": {
+                  "title": "Action brief: Evaluate the AI support assistant pilot, calculate impact, and notify th",
+                  "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                  "recommendations": [
+                    "Start with a narrow, measurable pilot.",
+                    "Keep a human approval checkpoint for external actions.",
+                    "Review run metrics and captured lessons before scaling."
+                  ],
+                  "evidence_used": [
+                    "Support baseline",
+                    "Pilot constraint"
+                  ]
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.400171+00:00"
+          },
+          {
+            "id": 18,
+            "type": "approval.requested",
+            "actor": "policy",
+            "payload": {
+              "step_id": "step_baf42ba0b0ae",
+              "title": "Queue the stakeholder update",
+              "risk": "high"
+            },
+            "created_at": "2026-11-06T16:26:12.401820+00:00"
+          }
+        ]
+      },
+      "after_approval": {
+        "id": "run_390a29549260",
+        "objective": "Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.",
+        "status": "completed",
+        "created_at": "2026-11-06T16:26:12.382713+00:00",
+        "updated_at": "2026-11-06T16:26:12.415468+00:00",
+        "context": {
+          "sources": [
+            {
+              "title": "Support baseline",
+              "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests."
+            },
+            {
+              "title": "Pilot constraint",
+              "content": "Any customer-facing output must be reviewed by a support lead."
+            }
+          ],
+          "expression": "1200 * 0.42",
+          "send_message": true,
+          "channel": "email",
+          "recipient": "project-sponsor@example.com",
+          "delegation": {
+            "objective": "Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.",
+            "strategy": "research -> synthesize -> act -> reflect",
+            "prior_lessons": [
+              "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication."
+            ]
+          },
+          "_approved_steps": [
+            "step_baf42ba0b0ae"
+          ]
+        },
+        "plan": [
+          {
+            "title": "Research the objective",
+            "agent": "researcher",
+            "tool": "knowledge.search",
+            "instruction": "Collect the relevant evidence supplied with the objective.",
+            "risk": "low",
+            "id": "step_a3293ed0f58a",
+            "status": "completed",
+            "output": {
+              "findings": [
+                {
+                  "title": "Support baseline",
+                  "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                  "url": null
+                },
+                {
+                  "title": "Pilot constraint",
+                  "content": "Any customer-facing output must be reviewed by a support lead.",
+                  "url": null
+                }
+              ],
+              "source_count": 2
+            }
+          },
+          {
+            "title": "Calculate requested metric",
+            "agent": "analyst",
+            "tool": "data.calculate",
+            "instruction": "Calculate the numeric input using the sandboxed arithmetic tool.",
+            "risk": "low",
+            "id": "step_9abd5da9284b",
+            "status": "completed",
+            "output": {
+              "expression": "1200 * 0.42",
+              "value": 504.0
+            }
+          },
+          {
+            "title": "Synthesize an action brief",
+            "agent": "writer",
+            "tool": "content.synthesize",
+            "instruction": "Create an evidence-linked executive brief with recommendations.",
+            "risk": "low",
+            "id": "step_51b4a0050838",
+            "status": "completed",
+            "output": {
+              "deliverable": {
+                "title": "Action brief: Evaluate the AI support assistant pilot, calculate impact, and notify th",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Support baseline",
+                  "Pilot constraint"
+                ]
+              }
+            }
+          },
+          {
+            "title": "Queue the stakeholder update",
+            "agent": "operator",
+            "tool": "app.message",
+            "instruction": "Prepare the stakeholder message and place it in the simulated outbox.",
+            "risk": "high",
+            "id": "step_baf42ba0b0ae",
+            "status": "completed",
+            "output": {
+              "message": {
+                "id": "msg_10fd8f49c2c0",
+                "run_id": "run_390a29549260",
+                "channel": "email",
+                "recipient": "project-sponsor@example.com",
+                "subject": "AI Workforce action brief",
+                "body": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.\n\n- Start with a narrow, measurable pilot.\n- Keep a human approval checkpoint for external actions.\n- Review run metrics and captured lessons before scaling.",
+                "created_at": "2026-11-06T16:26:12.411619+00:00",
+                "delivery": "simulated"
+              },
+              "outbox_path": "/Users/manastole/ASU/Agentic AI/Project/Final Project/ai-workforce-capstone/artifacts/evidence/outbox/msg_10fd8f49c2c0.json"
+            }
+          }
+        ],
+        "result": {
+          "summary": "All delegated tasks completed successfully.",
+          "artifacts": [
+            {
+              "findings": [
+                {
+                  "title": "Support baseline",
+                  "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                  "url": null
+                },
+                {
+                  "title": "Pilot constraint",
+                  "content": "Any customer-facing output must be reviewed by a support lead.",
+                  "url": null
+                }
+              ],
+              "source_count": 2
+            },
+            {
+              "expression": "1200 * 0.42",
+              "value": 504.0
+            },
+            {
+              "deliverable": {
+                "title": "Action brief: Evaluate the AI support assistant pilot, calculate impact, and notify th",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Support baseline",
+                  "Pilot constraint"
+                ]
+              }
+            },
+            {
+              "message": {
+                "id": "msg_10fd8f49c2c0",
+                "run_id": "run_390a29549260",
+                "channel": "email",
+                "recipient": "project-sponsor@example.com",
+                "subject": "AI Workforce action brief",
+                "body": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.\n\n- Start with a narrow, measurable pilot.\n- Keep a human approval checkpoint for external actions.\n- Review run metrics and captured lessons before scaling.",
+                "created_at": "2026-11-06T16:26:12.411619+00:00",
+                "delivery": "simulated"
+              },
+              "outbox_path": "/Users/manastole/ASU/Agentic AI/Project/Final Project/ai-workforce-capstone/artifacts/evidence/outbox/msg_10fd8f49c2c0.json"
+            }
+          ],
+          "review": {
+            "quality_score": 1.0,
+            "reflection": "Evidence was synthesized around review, objective, execution, evaluate, support. The recommended response prioritizes a measurable outcome, explicit ownership, and a human checkpoint before external action.",
+            "lesson_saved": "For objectives involving evaluate, support, assistant, preserve evidence provenance and require approval before outbound communication.",
+            "checks": {
+              "has_evidence": true,
+              "all_steps_completed": true,
+              "external_action_guarded": true
+            }
+          }
+        },
+        "error": null,
+        "events": [
+          {
+            "id": 9,
+            "type": "run.created",
+            "actor": "user",
+            "payload": {
+              "objective": "Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor."
+            },
+            "created_at": "2026-11-06T16:26:12.383526+00:00"
+          },
+          {
+            "id": 10,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.385332+00:00"
+          },
+          {
+            "id": 11,
+            "type": "plan.created",
+            "actor": "planner",
+            "payload": {
+              "steps": [
+                {
+                  "title": "Research the objective",
+                  "agent": "researcher",
+                  "tool": "knowledge.search",
+                  "instruction": "Collect the relevant evidence supplied with the objective.",
+                  "risk": "low",
+                  "id": "step_a3293ed0f58a",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Calculate requested metric",
+                  "agent": "analyst",
+                  "tool": "data.calculate",
+                  "instruction": "Calculate the numeric input using the sandboxed arithmetic tool.",
+                  "risk": "low",
+                  "id": "step_9abd5da9284b",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Synthesize an action brief",
+                  "agent": "writer",
+                  "tool": "content.synthesize",
+                  "instruction": "Create an evidence-linked executive brief with recommendations.",
+                  "risk": "low",
+                  "id": "step_51b4a0050838",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Queue the stakeholder update",
+                  "agent": "operator",
+                  "tool": "app.message",
+                  "instruction": "Prepare the stakeholder message and place it in the simulated outbox.",
+                  "risk": "high",
+                  "id": "step_baf42ba0b0ae",
+                  "status": "pending",
+                  "output": null
+                }
+              ]
+            },
+            "created_at": "2026-11-06T16:26:12.387809+00:00"
+          },
+          {
+            "id": 12,
+            "type": "step.started",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_a3293ed0f58a",
+              "tool": "knowledge.search"
+            },
+            "created_at": "2026-11-06T16:26:12.389785+00:00"
+          },
+          {
+            "id": 13,
+            "type": "step.completed",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_a3293ed0f58a",
+              "output": {
+                "findings": [
+                  {
+                    "title": "Support baseline",
+                    "content": "The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.",
+                    "url": null
+                  },
+                  {
+                    "title": "Pilot constraint",
+                    "content": "Any customer-facing output must be reviewed by a support lead.",
+                    "url": null
+                  }
+                ],
+                "source_count": 2
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.391674+00:00"
+          },
+          {
+            "id": 14,
+            "type": "step.started",
+            "actor": "analyst",
+            "payload": {
+              "step_id": "step_9abd5da9284b",
+              "tool": "data.calculate"
+            },
+            "created_at": "2026-11-06T16:26:12.393692+00:00"
+          },
+          {
+            "id": 15,
+            "type": "step.completed",
+            "actor": "analyst",
+            "payload": {
+              "step_id": "step_9abd5da9284b",
+              "output": {
+                "expression": "1200 * 0.42",
+                "value": 504.0
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.395667+00:00"
+          },
+          {
+            "id": 16,
+            "type": "step.started",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_51b4a0050838",
+              "tool": "content.synthesize"
+            },
+            "created_at": "2026-11-06T16:26:12.398128+00:00"
+          },
+          {
+            "id": 17,
+            "type": "step.completed",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_51b4a0050838",
+              "output": {
+                "deliverable": {
+                  "title": "Action brief: Evaluate the AI support assistant pilot, calculate impact, and notify th",
+                  "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                  "recommendations": [
+                    "Start with a narrow, measurable pilot.",
+                    "Keep a human approval checkpoint for external actions.",
+                    "Review run metrics and captured lessons before scaling."
+                  ],
+                  "evidence_used": [
+                    "Support baseline",
+                    "Pilot constraint"
+                  ]
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.400171+00:00"
+          },
+          {
+            "id": 18,
+            "type": "approval.requested",
+            "actor": "policy",
+            "payload": {
+              "step_id": "step_baf42ba0b0ae",
+              "title": "Queue the stakeholder update",
+              "risk": "high"
+            },
+            "created_at": "2026-11-06T16:26:12.401820+00:00"
+          },
+          {
+            "id": 19,
+            "type": "approval.granted",
+            "actor": "human",
+            "payload": {
+              "step_id": "step_baf42ba0b0ae"
+            },
+            "created_at": "2026-11-06T16:26:12.406258+00:00"
+          },
+          {
+            "id": 20,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.408529+00:00"
+          },
+          {
+            "id": 21,
+            "type": "step.started",
+            "actor": "operator",
+            "payload": {
+              "step_id": "step_baf42ba0b0ae",
+              "tool": "app.message"
+            },
+            "created_at": "2026-11-06T16:26:12.410565+00:00"
+          },
+          {
+            "id": 22,
+            "type": "step.completed",
+            "actor": "operator",
+            "payload": {
+              "step_id": "step_baf42ba0b0ae",
+              "output": {
+                "message": {
+                  "id": "msg_10fd8f49c2c0",
+                  "run_id": "run_390a29549260",
+                  "channel": "email",
+                  "recipient": "project-sponsor@example.com",
+                  "subject": "AI Workforce action brief",
+                  "body": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.\n\n- Start with a narrow, measurable pilot.\n- Keep a human approval checkpoint for external actions.\n- Review run metrics and captured lessons before scaling.",
+                  "created_at": "2026-11-06T16:26:12.411619+00:00",
+                  "delivery": "simulated"
+                },
+                "outbox_path": "/Users/manastole/ASU/Agentic AI/Project/Final Project/ai-workforce-capstone/artifacts/evidence/outbox/msg_10fd8f49c2c0.json"
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.413484+00:00"
+          },
+          {
+            "id": 23,
+            "type": "run.completed",
+            "actor": "manager",
+            "payload": {
+              "review": {
+                "quality_score": 1.0,
+                "reflection": "Evidence was synthesized around review, objective, execution, evaluate, support. The recommended response prioritizes a measurable outcome, explicit ownership, and a human checkpoint before external action.",
+                "lesson_saved": "For objectives involving evaluate, support, assistant, preserve evidence provenance and require approval before outbound communication.",
+                "checks": {
+                  "has_evidence": true,
+                  "all_steps_completed": true,
+                  "external_action_guarded": true
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.416670+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S3",
+      "name": "Rejected message has no side effect",
+      "passed": true,
+      "latency_ms": 18.556,
+      "outbox_count_before_rejection": 1,
+      "outbox_count_after_rejection": 1,
+      "run": {
+        "id": "run_ebd19e1ed0d9",
+        "objective": "Prepare a pilot memo and notify the sponsor.",
+        "status": "rejected",
+        "created_at": "2026-11-06T16:26:12.418734+00:00",
+        "updated_at": "2026-11-06T16:26:12.438038+00:00",
+        "context": {
+          "send_message": true,
+          "recipient": "project-sponsor@example.com",
+          "delegation": {
+            "objective": "Prepare a pilot memo and notify the sponsor.",
+            "strategy": "research -> synthesize -> act -> reflect",
+            "prior_lessons": [
+              "For objectives involving evaluate, support, assistant, preserve evidence provenance and require approval before outbound communication.",
+              "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication."
+            ]
+          }
+        },
+        "plan": [
+          {
+            "title": "Research the objective",
+            "agent": "researcher",
+            "tool": "knowledge.search",
+            "instruction": "Collect the relevant evidence supplied with the objective.",
+            "risk": "low",
+            "id": "step_53428c4f7fa7",
+            "status": "completed",
+            "output": {
+              "findings": [
+                {
+                  "title": "Objective brief",
+                  "content": "Prepare a pilot memo and notify the sponsor.",
+                  "note": "No external sources supplied; conclusion is hypothesis-level."
+                }
+              ],
+              "source_count": 1
+            }
+          },
+          {
+            "title": "Synthesize an action brief",
+            "agent": "writer",
+            "tool": "content.synthesize",
+            "instruction": "Create an evidence-linked executive brief with recommendations.",
+            "risk": "low",
+            "id": "step_6ff0bfac7f78",
+            "status": "completed",
+            "output": {
+              "deliverable": {
+                "title": "Action brief: Prepare a pilot memo and notify the sponsor.",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Objective brief"
+                ]
+              }
+            }
+          },
+          {
+            "title": "Queue the stakeholder update",
+            "agent": "operator",
+            "tool": "app.message",
+            "instruction": "Prepare the stakeholder message and place it in the simulated outbox.",
+            "risk": "high",
+            "id": "step_71cc95168dd6",
+            "status": "rejected",
+            "output": null
+          }
+        ],
+        "result": null,
+        "error": null,
+        "events": [
+          {
+            "id": 24,
+            "type": "run.created",
+            "actor": "user",
+            "payload": {
+              "objective": "Prepare a pilot memo and notify the sponsor."
+            },
+            "created_at": "2026-11-06T16:26:12.419587+00:00"
+          },
+          {
+            "id": 25,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.421666+00:00"
+          },
+          {
+            "id": 26,
+            "type": "plan.created",
+            "actor": "planner",
+            "payload": {
+              "steps": [
+                {
+                  "title": "Research the objective",
+                  "agent": "researcher",
+                  "tool": "knowledge.search",
+                  "instruction": "Collect the relevant evidence supplied with the objective.",
+                  "risk": "low",
+                  "id": "step_53428c4f7fa7",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Synthesize an action brief",
+                  "agent": "writer",
+                  "tool": "content.synthesize",
+                  "instruction": "Create an evidence-linked executive brief with recommendations.",
+                  "risk": "low",
+                  "id": "step_6ff0bfac7f78",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Queue the stakeholder update",
+                  "agent": "operator",
+                  "tool": "app.message",
+                  "instruction": "Prepare the stakeholder message and place it in the simulated outbox.",
+                  "risk": "high",
+                  "id": "step_71cc95168dd6",
+                  "status": "pending",
+                  "output": null
+                }
+              ]
+            },
+            "created_at": "2026-11-06T16:26:12.423827+00:00"
+          },
+          {
+            "id": 27,
+            "type": "step.started",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_53428c4f7fa7",
+              "tool": "knowledge.search"
+            },
+            "created_at": "2026-11-06T16:26:12.425994+00:00"
+          },
+          {
+            "id": 28,
+            "type": "step.completed",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_53428c4f7fa7",
+              "output": {
+                "findings": [
+                  {
+                    "title": "Objective brief",
+                    "content": "Prepare a pilot memo and notify the sponsor.",
+                    "note": "No external sources supplied; conclusion is hypothesis-level."
+                  }
+                ],
+                "source_count": 1
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.428518+00:00"
+          },
+          {
+            "id": 29,
+            "type": "step.started",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_6ff0bfac7f78",
+              "tool": "content.synthesize"
+            },
+            "created_at": "2026-11-06T16:26:12.430657+00:00"
+          },
+          {
+            "id": 30,
+            "type": "step.completed",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_6ff0bfac7f78",
+              "output": {
+                "deliverable": {
+                  "title": "Action brief: Prepare a pilot memo and notify the sponsor.",
+                  "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                  "recommendations": [
+                    "Start with a narrow, measurable pilot.",
+                    "Keep a human approval checkpoint for external actions.",
+                    "Review run metrics and captured lessons before scaling."
+                  ],
+                  "evidence_used": [
+                    "Objective brief"
+                  ]
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.433358+00:00"
+          },
+          {
+            "id": 31,
+            "type": "approval.requested",
+            "actor": "policy",
+            "payload": {
+              "step_id": "step_71cc95168dd6",
+              "title": "Queue the stakeholder update",
+              "risk": "high"
+            },
+            "created_at": "2026-11-06T16:26:12.436096+00:00"
+          },
+          {
+            "id": 32,
+            "type": "approval.rejected",
+            "actor": "human",
+            "payload": {
+              "step_id": "step_71cc95168dd6"
+            },
+            "created_at": "2026-11-06T16:26:12.439642+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S4",
+      "name": "Malicious calculation is blocked",
+      "passed": true,
+      "latency_ms": 20.501,
+      "run": {
+        "id": "run_a8906a558d88",
+        "objective": "Calculate an untrusted expression safely.",
+        "status": "failed",
+        "created_at": "2026-11-06T16:26:12.442247+00:00",
+        "updated_at": "2026-11-06T16:26:12.460057+00:00",
+        "context": {
+          "expression": "__import__('os').system('false')",
+          "send_message": false,
+          "delegation": {
+            "objective": "Calculate an untrusted expression safely.",
+            "strategy": "research -> synthesize -> act -> reflect",
+            "prior_lessons": [
+              "For objectives involving evaluate, support, assistant, preserve evidence provenance and require approval before outbound communication."
+            ]
+          }
+        },
+        "plan": [
+          {
+            "title": "Research the objective",
+            "agent": "researcher",
+            "tool": "knowledge.search",
+            "instruction": "Collect the relevant evidence supplied with the objective.",
+            "risk": "low",
+            "id": "step_51836cf4d631",
+            "status": "completed",
+            "output": {
+              "findings": [
+                {
+                  "title": "Objective brief",
+                  "content": "Calculate an untrusted expression safely.",
+                  "note": "No external sources supplied; conclusion is hypothesis-level."
+                }
+              ],
+              "source_count": 1
+            }
+          },
+          {
+            "title": "Calculate requested metric",
+            "agent": "analyst",
+            "tool": "data.calculate",
+            "instruction": "Calculate the numeric input using the sandboxed arithmetic tool.",
+            "risk": "low",
+            "id": "step_f7f8298a93df",
+            "status": "running",
+            "output": null
+          },
+          {
+            "title": "Synthesize an action brief",
+            "agent": "writer",
+            "tool": "content.synthesize",
+            "instruction": "Create an evidence-linked executive brief with recommendations.",
+            "risk": "low",
+            "id": "step_3ab5d984872c",
+            "status": "pending",
+            "output": null
+          }
+        ],
+        "result": null,
+        "error": "ToolError: Invalid calculation: only basic arithmetic is allowed",
+        "events": [
+          {
+            "id": 33,
+            "type": "run.created",
+            "actor": "user",
+            "payload": {
+              "objective": "Calculate an untrusted expression safely."
+            },
+            "created_at": "2026-11-06T16:26:12.443354+00:00"
+          },
+          {
+            "id": 34,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.446591+00:00"
+          },
+          {
+            "id": 35,
+            "type": "plan.created",
+            "actor": "planner",
+            "payload": {
+              "steps": [
+                {
+                  "title": "Research the objective",
+                  "agent": "researcher",
+                  "tool": "knowledge.search",
+                  "instruction": "Collect the relevant evidence supplied with the objective.",
+                  "risk": "low",
+                  "id": "step_51836cf4d631",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Calculate requested metric",
+                  "agent": "analyst",
+                  "tool": "data.calculate",
+                  "instruction": "Calculate the numeric input using the sandboxed arithmetic tool.",
+                  "risk": "low",
+                  "id": "step_f7f8298a93df",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Synthesize an action brief",
+                  "agent": "writer",
+                  "tool": "content.synthesize",
+                  "instruction": "Create an evidence-linked executive brief with recommendations.",
+                  "risk": "low",
+                  "id": "step_3ab5d984872c",
+                  "status": "pending",
+                  "output": null
+                }
+              ]
+            },
+            "created_at": "2026-11-06T16:26:12.449745+00:00"
+          },
+          {
+            "id": 36,
+            "type": "step.started",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_51836cf4d631",
+              "tool": "knowledge.search"
+            },
+            "created_at": "2026-11-06T16:26:12.452551+00:00"
+          },
+          {
+            "id": 37,
+            "type": "step.completed",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_51836cf4d631",
+              "output": {
+                "findings": [
+                  {
+                    "title": "Objective brief",
+                    "content": "Calculate an untrusted expression safely.",
+                    "note": "No external sources supplied; conclusion is hypothesis-level."
+                  }
+                ],
+                "source_count": 1
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.455782+00:00"
+          },
+          {
+            "id": 38,
+            "type": "step.started",
+            "actor": "analyst",
+            "payload": {
+              "step_id": "step_f7f8298a93df",
+              "tool": "data.calculate"
+            },
+            "created_at": "2026-11-06T16:26:12.458993+00:00"
+          },
+          {
+            "id": 39,
+            "type": "run.failed",
+            "actor": "manager",
+            "payload": {
+              "error": "ToolError: Invalid calculation: only basic arithmetic is allowed"
+            },
+            "created_at": "2026-11-06T16:26:12.461586+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "id": "S5",
+      "name": "Related run reuses a stored lesson",
+      "passed": true,
+      "latency_ms": 26.42,
+      "retrieved_lessons": [
+        "For objectives involving evaluate, support, assistant, preserve evidence provenance and require approval before outbound communication.",
+        "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication."
+      ],
+      "run": {
+        "id": "run_638644e0816c",
+        "objective": "Review AI support pilot risks and prepare a follow-up brief.",
+        "status": "completed",
+        "created_at": "2026-11-06T16:26:12.464221+00:00",
+        "updated_at": "2026-11-06T16:26:12.488335+00:00",
+        "context": {
+          "send_message": false,
+          "delegation": {
+            "objective": "Review AI support pilot risks and prepare a follow-up brief.",
+            "strategy": "research -> synthesize -> act -> reflect",
+            "prior_lessons": [
+              "For objectives involving evaluate, support, assistant, preserve evidence provenance and require approval before outbound communication.",
+              "For objectives involving analyze, support, pilot, preserve evidence provenance and require approval before outbound communication."
+            ]
+          }
+        },
+        "plan": [
+          {
+            "title": "Research the objective",
+            "agent": "researcher",
+            "tool": "knowledge.search",
+            "instruction": "Collect the relevant evidence supplied with the objective.",
+            "risk": "low",
+            "id": "step_876d5020bd3c",
+            "status": "completed",
+            "output": {
+              "findings": [
+                {
+                  "title": "Objective brief",
+                  "content": "Review AI support pilot risks and prepare a follow-up brief.",
+                  "note": "No external sources supplied; conclusion is hypothesis-level."
+                }
+              ],
+              "source_count": 1
+            }
+          },
+          {
+            "title": "Synthesize an action brief",
+            "agent": "writer",
+            "tool": "content.synthesize",
+            "instruction": "Create an evidence-linked executive brief with recommendations.",
+            "risk": "low",
+            "id": "step_0a82cb64280a",
+            "status": "completed",
+            "output": {
+              "deliverable": {
+                "title": "Action brief: Review AI support pilot risks and prepare a follow-up brief.",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Objective brief"
+                ]
+              }
+            }
+          }
+        ],
+        "result": {
+          "summary": "All delegated tasks completed successfully.",
+          "artifacts": [
+            {
+              "findings": [
+                {
+                  "title": "Objective brief",
+                  "content": "Review AI support pilot risks and prepare a follow-up brief.",
+                  "note": "No external sources supplied; conclusion is hypothesis-level."
+                }
+              ],
+              "source_count": 1
+            },
+            {
+              "deliverable": {
+                "title": "Action brief: Review AI support pilot risks and prepare a follow-up brief.",
+                "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                "recommendations": [
+                  "Start with a narrow, measurable pilot.",
+                  "Keep a human approval checkpoint for external actions.",
+                  "Review run metrics and captured lessons before scaling."
+                ],
+                "evidence_used": [
+                  "Objective brief"
+                ]
+              }
+            }
+          ],
+          "review": {
+            "quality_score": 0.85,
+            "reflection": "Evidence was synthesized around review, objective, execution, support, prepare. The recommended response prioritizes a measurable outcome, explicit ownership, and a human checkpoint before external action.",
+            "lesson_saved": "For objectives involving review, support, pilot, preserve evidence provenance and require approval before outbound communication.",
+            "checks": {
+              "has_evidence": true,
+              "all_steps_completed": true,
+              "external_action_guarded": true
+            }
+          }
+        },
+        "error": null,
+        "events": [
+          {
+            "id": 40,
+            "type": "run.created",
+            "actor": "user",
+            "payload": {
+              "objective": "Review AI support pilot risks and prepare a follow-up brief."
+            },
+            "created_at": "2026-11-06T16:26:12.465748+00:00"
+          },
+          {
+            "id": 41,
+            "type": "run.started",
+            "actor": "manager",
+            "payload": {},
+            "created_at": "2026-11-06T16:26:12.468916+00:00"
+          },
+          {
+            "id": 42,
+            "type": "plan.created",
+            "actor": "planner",
+            "payload": {
+              "steps": [
+                {
+                  "title": "Research the objective",
+                  "agent": "researcher",
+                  "tool": "knowledge.search",
+                  "instruction": "Collect the relevant evidence supplied with the objective.",
+                  "risk": "low",
+                  "id": "step_876d5020bd3c",
+                  "status": "pending",
+                  "output": null
+                },
+                {
+                  "title": "Synthesize an action brief",
+                  "agent": "writer",
+                  "tool": "content.synthesize",
+                  "instruction": "Create an evidence-linked executive brief with recommendations.",
+                  "risk": "low",
+                  "id": "step_0a82cb64280a",
+                  "status": "pending",
+                  "output": null
+                }
+              ]
+            },
+            "created_at": "2026-11-06T16:26:12.472809+00:00"
+          },
+          {
+            "id": 43,
+            "type": "step.started",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_876d5020bd3c",
+              "tool": "knowledge.search"
+            },
+            "created_at": "2026-11-06T16:26:12.476188+00:00"
+          },
+          {
+            "id": 44,
+            "type": "step.completed",
+            "actor": "researcher",
+            "payload": {
+              "step_id": "step_876d5020bd3c",
+              "output": {
+                "findings": [
+                  {
+                    "title": "Objective brief",
+                    "content": "Review AI support pilot risks and prepare a follow-up brief.",
+                    "note": "No external sources supplied; conclusion is hypothesis-level."
+                  }
+                ],
+                "source_count": 1
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.479209+00:00"
+          },
+          {
+            "id": 45,
+            "type": "step.started",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_0a82cb64280a",
+              "tool": "content.synthesize"
+            },
+            "created_at": "2026-11-06T16:26:12.482459+00:00"
+          },
+          {
+            "id": 46,
+            "type": "step.completed",
+            "actor": "writer",
+            "payload": {
+              "step_id": "step_0a82cb64280a",
+              "output": {
+                "deliverable": {
+                  "title": "Action brief: Review AI support pilot risks and prepare a follow-up brief.",
+                  "executive_summary": "The workforce analyzed the objective, converted available evidence into an execution plan, and prepared the requested outbound action.",
+                  "recommendations": [
+                    "Start with a narrow, measurable pilot.",
+                    "Keep a human approval checkpoint for external actions.",
+                    "Review run metrics and captured lessons before scaling."
+                  ],
+                  "evidence_used": [
+                    "Objective brief"
+                  ]
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.485782+00:00"
+          },
+          {
+            "id": 47,
+            "type": "run.completed",
+            "actor": "manager",
+            "payload": {
+              "review": {
+                "quality_score": 0.85,
+                "reflection": "Evidence was synthesized around review, objective, execution, support, prepare. The recommended response prioritizes a measurable outcome, explicit ownership, and a human checkpoint before external action.",
+                "lesson_saved": "For objectives involving review, support, pilot, preserve evidence provenance and require approval before outbound communication.",
+                "checks": {
+                  "has_evidence": true,
+                  "all_steps_completed": true,
+                  "external_action_guarded": true
+                }
+              }
+            },
+            "created_at": "2026-11-06T16:26:12.489621+00:00"
+          }
+        ]
+      }
+    }
+  ]
+}

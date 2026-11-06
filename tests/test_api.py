@@ -40,3 +40,18 @@ def test_api_validates_empty_objective(tmp_path: Path, monkeypatch) -> None:
     client = TestClient(create_app())
     assert client.post("/api/runs", json={"objective": ""}).status_code == 422
     get_orchestrator.cache_clear()
+
+
+def test_dashboard_exposes_evidence_and_calculation_inputs(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AI_WORKFORCE_DB", str(tmp_path / "api.db"))
+    monkeypatch.setenv("AI_WORKFORCE_OUTBOX", str(tmp_path / "outbox"))
+    get_orchestrator.cache_clear()
+    client = TestClient(create_app())
+
+    dashboard = client.get("/")
+
+    assert dashboard.status_code == 200
+    assert 'id="sources"' in dashboard.text
+    assert 'id="expression"' in dashboard.text
+    assert 'id="recipient"' in dashboard.text
+    get_orchestrator.cache_clear()
