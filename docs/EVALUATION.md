@@ -58,6 +58,70 @@ Compare two conditions across a fixed set of 20 objectives:
 
 Randomize objective order and blind human raters to condition where output formatting permits. Measure task success, rubric scores, latency, provider calls, and human interventions. Run the suite once without memory and again with curated prior lessons to isolate memory’s effect.
 
+## Evaluation runner
+
+`workforce eval` compares the system with its baselines on versioned datasets and saves a raw JSON
+trace for every run. Run it from the repository root.
+
+```bash
+workforce eval --dry-run                              # planned run counts, no execution
+workforce eval --output artifacts/evaluation/offline-demo   # offline, no API key
+
+# Live model. Use --dry-run first: this makes billable calls.
+AI_WORKFORCE_PROVIDER=openai OPENAI_API_KEY=... \
+  workforce eval --repeats 3 --output artifacts/evaluation/live-gpt-4o-mini
+
+workforce eval --rescore artifacts/evaluation/offline-demo  # recompute scores from raw runs
+```
+
+Use `--limit N` for a clearly labeled pilot subset, `--conditions b1,p` to select conditions, and
+`--dataset PATH` (repeatable) to choose datasets.
+
+### Conditions
+
+| Key | Condition | Planning | Replans | Grounding revision | Lessons |
+|---|---|---|---|---|---|
+| `b0` | Single model call | None | None | None | None |
+| `b1` | Fixed pipeline | Hard-coded | 0 | No | Saved, unused |
+| `p-m` | Proposed without memory | Provider plan + validator | 2 | Yes | None |
+| `p` | Proposed | Provider plan + validator | 2 | Yes | From `dev` runs |
+
+Every test run gets its own database, so one test case cannot teach another. `p` starts from a copy
+of a database seeded by running the `dev` split.
+
+### Datasets
+
+| Dataset | Origin | License | Cases (dev/test) | Tests |
+|---|---|---|---|---|
+| `datasets/workforce_scenarios_v1.json` | Synthetic, written for this project | MIT | 30 (8/22) | Categories C1-C5: brief, calculation and approval, off-template, injected failure, prompt injection |
+| `datasets/finqa_pilot_v1.json` | FinQA public benchmark, pinned commit | MIT | 30 (8/22) | Retrieval, citation, and arithmetic on questions the team did not write |
+
+`scripts/build_finqa_subset.py` rebuilds the FinQA subset deterministically: it verifies the source
+file hashes, keeps FinQA's official splits, orders cases by the SHA-256 of their ID, and keeps one
+eligible case per filing. Stakeholder review of the scenario dataset is recorded as pending in its
+`review_status` field until it happens.
+
+### Outputs
+
+| File | Contents |
+|---|---|
+| `manifest.json` | Provider, model, commit, conditions, budgets, and each dataset's origin, license, split counts, evaluated count, and SHA-256 |
+| `raw/<dataset>__<condition>.jsonl` | One complete run per line: run ID, events, plan, outputs, outbox, latency, tokens |
+| `results.json` | Per-run scores and aggregates, with run IDs for each aggregate |
+| `scores.csv`, `summary.md` | Long-form scores and readable tables |
+
+### Scoring limits
+
+- Offline results measure orchestration only. The demo provider makes no model calls, its planner
+  ignores lessons, and B0 receives canned text. Never report them as model quality.
+- Tokens are reported as `n/a` unless the provider returns usage.
+- Numeric answers are correct when any stated number is within 0.5% of gold, ignoring sign. This is
+  lenient and applied identically to all conditions.
+- Citation precision measures whether cited passages are in the gold evidence set, not whether they
+  semantically support the claim. Human ratings remain a separate, unautomated step.
+- Approval decisions come from a scripted reviewer that approves only a requested message to the
+  user's recipient.
+
 ## Automated commands
 
 ```bash

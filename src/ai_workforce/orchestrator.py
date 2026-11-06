@@ -1,4 +1,5 @@
 import threading
+from dataclasses import dataclass
 from typing import Any, Optional
 
 from .agents import (
@@ -22,6 +23,16 @@ class InvalidTransition(ValueError):
     pass
 
 
+@dataclass(frozen=True)
+class ExecutionConfig:
+    """Agentic capabilities a run may use. Evaluation baselines switch these off."""
+
+    model_planning: bool = True
+    max_replans: int = 2
+    verify_grounding: bool = True
+    use_memory: bool = True
+
+
 class WorkforceOrchestrator:
     def __init__(
         self,
@@ -29,11 +40,13 @@ class WorkforceOrchestrator:
         provider: LLMProvider,
         tools: ToolRegistry,
         auto_approve: bool = False,
+        config: Optional[ExecutionConfig] = None,
     ):
         self.repository = repository
         self.provider = provider
         self.tools = tools
         self.auto_approve = auto_approve
+        self.config = config or ExecutionConfig()
         self.manager = ManagerAgent()
         self.planner = PlannerAgent(provider, tools)
         self.critic = CriticAgent(provider, repository)
@@ -157,7 +170,7 @@ class WorkforceOrchestrator:
                         step.agent,
                         {"step_id": step.id, "output": step.output},
                     )
-                    if step.tool == "content.synthesize":
+                    if step.tool == "content.synthesize" and self.config.verify_grounding:
                         grounding = self._verify_and_revise(run, step, prior_outputs)
                         if not grounding["passed"]:
                             error = "Grounding review failed after the allowed writer revision"
@@ -204,12 +217,27 @@ class WorkforceOrchestrator:
             return run
 
     def _create_initial_plan(self, run: Run) -> None:
-        memories = self.repository.search_memories(extract_terms(run.objective), limit=3)
-        agent_context = AgentContext(run=run, memories=memories)
+        agent_context = AgentContext(run=run, memories=self._retrieve_lessons(run))
         run.context["delegation"] = self.manager.delegate(agent_context)
+        run.context["delegation"]["budget"]["max_replans"] = self.config.max_replans
+        if self.config.model_planning:
+            source = self._plan_with_model(run, agent_context)
+        else:
+            run.plan = self.planner.fallback_plan(agent_context)
+            source = "fixed_pipeline"
+        run.context["_plan_source"] = source
+        self.repository.save_run(run)
+        self.repository.add_event(
+            run.id,
+            "plan.created",
+            "planner",
+            {"source": source, "steps": [step.to_dict() for step in run.plan]},
+        )
+
+    def _plan_with_model(self, run: Run, agent_context: AgentContext) -> str:
         try:
             run.plan = self.planner.create_plan(agent_context)
-            source = "model"
+            return "model"
         except PlanValidationError as first_error:
             run.context["_repairs"] = 1
             self.repository.add_event(
@@ -219,27 +247,24 @@ class WorkforceOrchestrator:
                 run.plan = self.planner.create_plan(
                     agent_context, validation_error=str(first_error)
                 )
-                source = "model_repair"
                 self.repository.add_event(
                     run.id, "plan.repaired", "planner", {"error": str(first_error)}
                 )
+                return "model_repair"
             except PlanValidationError as second_error:
                 run.plan = self.planner.fallback_plan(agent_context)
-                source = "deterministic_fallback"
                 self.repository.add_event(
                     run.id,
                     "plan.fallback",
                     "planner",
                     {"errors": [str(first_error), str(second_error)]},
                 )
-        run.context["_plan_source"] = source
-        self.repository.save_run(run)
-        self.repository.add_event(
-            run.id,
-            "plan.created",
-            "planner",
-            {"source": source, "steps": [step.to_dict() for step in run.plan]},
-        )
+                return "deterministic_fallback"
+
+    def _retrieve_lessons(self, run: Run) -> list[dict[str, Any]]:
+        if not self.config.use_memory:
+            return []
+        return self.repository.search_memories(extract_terms(run.objective), limit=3)
 
     def _execute_step(
         self, run: Run, step: Any, prior_outputs: list[dict[str, Any]]
@@ -260,7 +285,7 @@ class WorkforceOrchestrator:
 
     def _replan(self, run: Run, failed_step: Any, error: str) -> bool:
         replans = int(run.context.get("_replans", 0))
-        if replans >= 2 or int(run.context.get("_step_attempts", 0)) >= 8:
+        if replans >= self.config.max_replans or int(run.context.get("_step_attempts", 0)) >= 8:
             return False
         run.context["_replans"] = replans + 1
         run.context.setdefault("_observations", []).append(
@@ -272,8 +297,7 @@ class WorkforceOrchestrator:
             if step.status == StepStatus.COMPLETED and step.id != failed_step.id
         ]
         completed_tools = [step.tool for step in completed_steps]
-        memories = self.repository.search_memories(extract_terms(run.objective), limit=3)
-        context = AgentContext(run=run, memories=memories)
+        context = AgentContext(run=run, memories=self._retrieve_lessons(run))
         try:
             remaining = self.planner.create_plan(
                 context, validation_error=error, completed_tools=completed_tools
@@ -328,7 +352,7 @@ class WorkforceOrchestrator:
                 run.id,
                 "draft.revised",
                 "writer",
-                {"step_id": step.id, "critic_notes": review["notes"]},
+                {"step_id": step.id, "critic_notes": review["notes"], "output": step.output},
             )
             review = self.critic.evaluate_draft(run)
             self.repository.add_event(run.id, "critic.rechecked", "critic", review)

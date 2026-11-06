@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Optional
@@ -11,9 +12,15 @@ class LLMError(RuntimeError):
 
 
 class LLMProvider(ABC):
+    reports_usage = False
+
     @abstractmethod
     def complete(self, system: str, prompt: str) -> str:
         raise NotImplementedError
+
+    def token_usage(self) -> dict[str, int]:
+        """Cumulative tokens billed by this provider instance."""
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
     def create_plan(self, request: dict[str, Any]) -> dict[str, Any]:
         response = self.complete(
@@ -111,10 +118,18 @@ class DemoProvider(LLMProvider):
 
 
 class OpenAICompatibleProvider(LLMProvider):
+    reports_usage = True
+
     def __init__(self, api_key: str, model: str, base_url: str):
         self.api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
+        self._usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        self._usage_lock = threading.Lock()
+
+    def token_usage(self) -> dict[str, int]:
+        with self._usage_lock:
+            return dict(self._usage)
 
     def complete(self, system: str, prompt: str) -> str:
         body = json.dumps(
@@ -148,6 +163,10 @@ class OpenAICompatibleProvider(LLMProvider):
                     time.sleep(0.5 * (2**attempt))
         else:
             raise LLMError(f"LLM request failed after 3 attempts: {last_error}") from last_error
+        usage = result.get("usage") or {}
+        with self._usage_lock:
+            for key in self._usage:
+                self._usage[key] += int(usage.get(key) or 0)
         try:
             return result["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:

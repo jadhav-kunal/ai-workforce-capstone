@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added `workforce eval`: a reproducible comparison of B0, B1, P-M, and P on two versioned datasets,
+  with raw traces for every run and rescoring without model calls.
+- Added the scenario and FinQA pilot datasets and token accounting for OpenAI-compatible providers.
+- Added `ExecutionConfig` so baselines can switch off agentic capabilities.
+- Revised drafts are now stored in the trace event.
+
 ## 2.0.0 — 2026-11-06
 
 - Added provider-generated typed plans with strict schema and tool-argument validation.
