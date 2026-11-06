@@ -1,9 +1,11 @@
 import argparse
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 from .config import get_settings
+from .llm import create_provider
 from .models import RunStatus
 from .sdk import Workforce
 
@@ -36,7 +38,64 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("list", help="List recent runs")
     subparsers.add_parser("metrics", help="Show aggregate run metrics")
     subparsers.add_parser("demo", help="Run the scripted end-to-end capstone demo")
+
+    evaluate = subparsers.add_parser(
+        "eval", help="Compare the proposed system with its baselines on versioned datasets"
+    )
+    evaluate.add_argument("--dataset", action="append", default=None, help="Dataset JSON path")
+    evaluate.add_argument("--conditions", default="b0,b1,p-m,p", help="Comma-separated conditions")
+    evaluate.add_argument("--split", choices=["dev", "test"], default="test")
+    evaluate.add_argument("--repeats", type=int, default=1)
+    evaluate.add_argument("--limit", type=int, default=None, help="Pilot: first N cases per set")
+    evaluate.add_argument("--output", default="artifacts/evaluation/latest")
+    evaluate.add_argument("--dry-run", action="store_true", help="Print planned runs and exit")
+    evaluate.add_argument("--rescore", metavar="DIR", help="Recompute scores from saved raw runs")
     return parser
+
+
+def command_eval(args: argparse.Namespace) -> int:
+    from .evaluation import (
+        CONDITIONS,
+        DEFAULT_DATASETS,
+        load_dataset,
+        plan_runs,
+        rescore,
+        run_evaluation,
+    )
+
+    if args.rescore:
+        rescore(Path(args.rescore))
+        print(f"Rescored {args.rescore}; see summary.md")
+        return 0
+    conditions = [item.strip() for item in args.conditions.split(",") if item.strip()]
+    unknown = [item for item in conditions if item not in CONDITIONS]
+    if unknown:
+        raise ValueError(f"Unknown conditions: {', '.join(unknown)}")
+    if args.repeats < 1:
+        raise ValueError("--repeats must be at least 1")
+    datasets = [load_dataset(path) for path in args.dataset or DEFAULT_DATASETS]
+    planned = plan_runs(datasets, conditions, args.split, args.repeats, args.limit)
+    if args.dry_run:
+        print(json.dumps(planned, indent=2))
+        return 0
+    settings = get_settings()
+    provider = create_provider(
+        settings.provider, settings.api_key, settings.model, settings.base_url
+    )
+    run_evaluation(
+        datasets,
+        conditions,
+        provider,
+        settings.provider,
+        settings.model if settings.provider != "demo" else "scripted",
+        Path(args.output),
+        split=args.split,
+        repeats=args.repeats,
+        limit=args.limit,
+        progress=lambda message: print(message, file=sys.stderr),
+    )
+    print(f"Wrote {planned['evaluation_runs']} scored runs to {args.output}; see summary.md")
+    return 0
 
 
 def command_run(workforce: Workforce, args: argparse.Namespace) -> int:
@@ -101,6 +160,8 @@ def main() -> None:
         )
         return
     try:
+        if args.command == "eval":
+            sys.exit(command_eval(args))
         workforce = Workforce()
         if args.command == "run":
             code = command_run(workforce, args)

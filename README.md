@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
-[![Tests](https://img.shields.io/badge/tests-19%20passing-2E7D32)](#testing-and-verification)
+[![Tests](https://img.shields.io/badge/tests-48%20passing-2E7D32)](#testing-and-verification)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 AI Workforce is an individual CSE 598 capstone project and runnable baseline. It demonstrates that useful agent automation needs more than prompt chaining: it needs explicit delegation, bounded tool access, persistent state, human control, auditability, and a safe improvement loop.
@@ -375,10 +375,7 @@ Current verified result on Python 3.9.6:
 
 ```text
 All checks passed!
-...................                                              [100%]
-19 passed in 0.72s
-TOTAL test coverage: 82%
-Planner/critic coverage (`agents.py`): 94%
+48 passed
 ```
 
 The test suite covers:
@@ -396,11 +393,22 @@ The test suite covers:
 - bounded replanning after a recoverable tool failure;
 - grounding-triggered replanning and a hard stop after the second replan;
 - passage-level grounding and calculation consistency checks;
-- deterministic message idempotency.
+- deterministic message idempotency;
+- evaluation scoring, safety checks, and reproducibility from raw runs.
 
 ## Evaluation plan
 
-The future improved system will be compared with this baseline on 20 fixed objectives.
+Compare the system with its baselines on two versioned datasets:
+
+```bash
+workforce eval --output artifacts/evaluation/offline-demo
+```
+
+The command saves raw traces, dataset provenance, and scores. See
+[`docs/EVALUATION.md`](docs/EVALUATION.md) for conditions, datasets, outputs, live-model use, and the
+limits of offline results.
+
+The original targets for the deterministic baseline were:
 
 | Metric | Definition | Target |
 |---|---|---:|

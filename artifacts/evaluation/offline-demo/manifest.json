@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "generated_at": "2026-11-06T22:25:24Z",
+  "provider": "demo",
+  "model": "scripted",
+  "temperature": null,
+  "tokens_measured": false,
+  "split": "test",
+  "repeats": 1,
+  "limit": null,
+  "conditions": [
+    "b0",
+    "b1",
+    "p-m",
+    "p"
+  ],
+  "condition_definitions": {
+    "b0": {
+      "label": "B0 single call",
+      "description": "One model call receives all sources. No tools, state, approval, or verification.",
+      "config": null
+    },
+    "b1": {
+      "label": "B1 fixed pipeline",
+      "description": "Hard-coded plan, same tools, trace, and approval gate. No replanning, no grounding revision, lessons saved but unused.",
+      "config": {
+        "model_planning": false,
+        "max_replans": 0,
+        "verify_grounding": false,
+        "use_memory": false
+      }
+    },
+    "p-m": {
+      "label": "P-M without memory",
+      "description": "Provider-generated validated plan, replanning, and grounding revision. No lessons.",
+      "config": {
+        "model_planning": true,
+        "max_replans": 2,
+        "verify_grounding": true,
+        "use_memory": false
+      }
+    },
+    "p": {
+      "label": "P proposed",
+      "description": "P-M plus lessons retrieved from development-split runs.",
+      "config": {
+        "model_planning": true,
+        "max_replans": 2,
+        "verify_grounding": true,
+        "use_memory": true
+      }
+    }
+  },
+  "budgets": {
+    "max_step_attempts": 8,
+    "max_replans": 2,
+    "max_writer_revisions": 1
+  },
+  "numeric_tolerance": 0.005,
+  "datasets": [
+    {
+      "name": "workforce_scenarios",
+      "version": "1.0.0",
+      "path": "datasets/workforce_scenarios_v1.json",
+      "sha256": "b2e3ae4d60a1eb7f172fd3d285b1e75dc1a1c5b9c94fc68dacb86f67f2269a7e",
+      "origin": {
+        "type": "synthetic",
+        "source": "Written for this capstone to match the Milestone 1 categories C1-C5. All organizations, figures, and addresses are fictional.",
+        "url": "https://github.com/jadhav-kunal/ai-workforce-capstone",
+        "builder": "hand-authored"
+      },
+      "license": "MIT",
+      "task": "Convert supplied evidence into a sourced action brief, with calculation, approval, recovery, and attack cases",
+      "relevance": "Mirrors the stakeholder's research-to-action workflow: analyze pilot evidence, calculate impact, prepare a brief, and notify a sponsor under approval.",
+      "review_status": "pending stakeholder review (Milestone 1 action item for Kunal Jadhav)",
+      "case_count": 30,
+      "split_counts": {
+        "dev": 8,
+        "test": 22
+      },
+      "evaluated_split": "test",
+      "evaluated_case_count": 22,
+      "evaluated_categories": {
+        "C1": 7,
+        "C2": 6,
+        "C3": 3,
+        "C4": 3,
+        "C5": 3
+      }
+    },
+    {
+      "name": "finqa_pilot",
+      "version": "1.0.0",
+      "path": "datasets/finqa_pilot_v1.json",
+      "sha256": "ddf9140ce782e38e1b547038c297a09d55368705de9e2fb5e1d4a36bc3cc1b19",
+      "origin": {
+        "type": "public_benchmark",
+        "source": "FinQA (Chen et al., EMNLP 2021)",
+        "url": "https://github.com/czyssrs/FinQA",
+        "commit": "0f16e2867befa6840783e58be38c9efb9229d742",
+        "file_sha256": {
+          "dev": "a847fb7e0d61a3125a1e2909852df6b89f1ee64d2c5ff1bf689e332214deee51",
+          "test": "831dbfb2e785dbc227f895ce3f24046433467aec67b09db2bd6ac7692a8a30dc"
+        },
+        "builder": "scripts/build_finqa_subset.py"
+      },
+      "license": "MIT",
+      "task": "Answer numeric questions over financial filings using retrieval and calculation",
+      "relevance": "Independent check of evidence retrieval, citation, and tool-based arithmetic on questions and gold evidence the team did not write.",
+      "review_status": "public benchmark annotations; not reviewed by the stakeholder",
+      "case_count": 30,
+      "split_counts": {
+        "dev": 8,
+        "test": 22
+      },
+      "evaluated_split": "test",
+      "evaluated_case_count": 22,
+      "evaluated_categories": {
+        "numeric_reasoning": 22
+      }
+    }
+  ],
+  "environment": {
+    "python": "3.9.6",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "commit": "4ff3b9f2f9508cfbd6ffdf274a7249ba8b1797d5",
+    "dirty": true
+  }
+}
