@@ -106,29 +106,58 @@ class Repository:
                     run.updated_at,
                 ),
             )
-            connection.execute("DELETE FROM steps WHERE run_id = ?", (run.id,))
-            connection.executemany(
-                """INSERT INTO steps
-                (id, run_id, position, title, agent, tool, instruction, arguments_json,
-                 risk, status, output_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                [
-                    (
-                        step.id,
-                        run.id,
-                        index,
-                        step.title,
-                        step.agent,
-                        step.tool,
-                        step.instruction,
-                        json.dumps(step.arguments),
-                        step.risk.value,
-                        step.status.value,
-                        json.dumps(step.output) if step.output is not None else None,
-                    )
-                    for index, step in enumerate(run.plan)
-                ],
-            )
+            self._write_steps(connection, run)
+
+    def save_run_if_status(self, run: Run, expected: RunStatus) -> bool:
+        """Atomically save `run` only if its stored status is still `expected`.
+
+        This is the single decision point for competing transitions. The conditional UPDATE is
+        evaluated under SQLite's write lock, so it also holds across API worker processes.
+        """
+        with self._lock, self.connection() as connection:
+            updated = connection.execute(
+                """UPDATE runs SET status = ?, context_json = ?, result_json = ?, error = ?,
+                updated_at = ? WHERE id = ? AND status = ?""",
+                (
+                    run.status.value,
+                    json.dumps(run.context),
+                    json.dumps(run.result) if run.result is not None else None,
+                    run.error,
+                    run.updated_at,
+                    run.id,
+                    expected.value,
+                ),
+            ).rowcount
+            if not updated:
+                return False
+            self._write_steps(connection, run)
+            return True
+
+    @staticmethod
+    def _write_steps(connection: sqlite3.Connection, run: Run) -> None:
+        connection.execute("DELETE FROM steps WHERE run_id = ?", (run.id,))
+        connection.executemany(
+            """INSERT INTO steps
+            (id, run_id, position, title, agent, tool, instruction, arguments_json,
+             risk, status, output_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            [
+                (
+                    step.id,
+                    run.id,
+                    index,
+                    step.title,
+                    step.agent,
+                    step.tool,
+                    step.instruction,
+                    json.dumps(step.arguments),
+                    step.risk.value,
+                    step.status.value,
+                    json.dumps(step.output) if step.output is not None else None,
+                )
+                for index, step in enumerate(run.plan)
+            ],
+        )
 
     def get_run(self, run_id: str) -> Optional[Run]:
         with self.connection() as connection:

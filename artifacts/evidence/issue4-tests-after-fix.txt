@@ -1,0 +1,17 @@
+tests/test_api_idempotency.py::test_repeated_start_while_waiting_changes_nothing PASSED
+tests/test_api_idempotency.py::test_repeated_approval_executes_the_message_once PASSED
+tests/test_api_idempotency.py::test_repeated_start_after_completion_changes_nothing PASSED
+tests/test_api_idempotency.py::test_approval_decision_survives_a_later_reversal PASSED
+tests/test_api_idempotency.py::test_rejection_survives_a_later_approval PASSED
+tests/test_api_idempotency.py::test_approval_is_bound_to_the_exact_step PASSED
+tests/test_api_idempotency.py::test_concurrent_approve_and_reject_record_exactly_one_decision PASSED
+tests/test_api_idempotency.py::test_concurrent_approvals_record_one_grant_and_one_message PASSED
+tests/test_api_idempotency.py::test_approval_racing_start_requests_sends_one_message PASSED
+tests/test_api_idempotency.py::test_decision_is_enforced_across_orchestrator_instances PASSED
+tests/test_tools.py::test_calculator_supports_basic_arithmetic PASSED
+tests/test_tools.py::test_calculator_rejects_code[__import__('os').system('touch /tmp/owned')] PASSED
+tests/test_tools.py::test_calculator_rejects_code[open('/etc/passwd').read()] PASSED
+tests/test_tools.py::test_calculator_rejects_code[[1, 2]] PASSED
+tests/test_tools.py::test_message_tool_suppresses_duplicate_step_delivery PASSED
+tests/test_tools.py::test_message_tool_keeps_the_first_write_under_concurrency PASSED
+============================== 16 passed in 0.36s ==============================

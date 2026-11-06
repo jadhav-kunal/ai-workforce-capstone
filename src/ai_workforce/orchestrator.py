@@ -80,13 +80,21 @@ class WorkforceOrchestrator:
 
     def _execute_locked(self, run_id: str) -> Run:
         run = self._require_run(run_id)
-        if run.status in {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.FAILED}:
+        # A paused run resumes only through resolve_approval, which moves it to QUEUED first.
+        if run.status in {
+            RunStatus.COMPLETED,
+            RunStatus.REJECTED,
+            RunStatus.FAILED,
+            RunStatus.WAITING_APPROVAL,
+        }:
             return run
         was_resuming = bool(run.plan)
+        claimed_status = run.status
         run.status = RunStatus.RUNNING
         run.error = None
         run.updated_at = utc_now()
-        self.repository.save_run(run)
+        if not self.repository.save_run_if_status(run, claimed_status):
+            return self._require_run(run_id)
         self.repository.add_event(
             run.id, "run.resumed" if was_resuming else "run.started", "manager", {}
         )
@@ -373,7 +381,7 @@ class WorkforceOrchestrator:
             step.status = StepStatus.REJECTED
             run.status = RunStatus.REJECTED
             run.updated_at = utc_now()
-            self.repository.save_run(run)
+            self._record_decision(run)
             self.repository.add_event(run.id, "approval.rejected", "human", {"step_id": step.id})
             return run
         approved_steps = set(run.context.get("_approved_steps", []))
@@ -382,9 +390,13 @@ class WorkforceOrchestrator:
         step.status = StepStatus.PENDING
         run.status = RunStatus.QUEUED
         run.updated_at = utc_now()
-        self.repository.save_run(run)
+        self._record_decision(run)
         self.repository.add_event(run.id, "approval.granted", "human", {"step_id": step.id})
         return self.execute(run.id)
+
+    def _record_decision(self, run: Run) -> None:
+        if not self.repository.save_run_if_status(run, RunStatus.WAITING_APPROVAL):
+            raise InvalidTransition("Approval was already resolved by another request")
 
     def detail(self, run_id: str) -> dict[str, Any]:
         run = self._require_run(run_id)

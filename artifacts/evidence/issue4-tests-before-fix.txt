@@ -1,0 +1,16 @@
+F.....FFFF.....F                                                         [100%]
+=================================== FAILURES ===================================
+/Users/shreyakale/ai-workforce-capstone/tests/test_api_idempotency.py:104: AssertionError: assert ['run.created...started', ...] == ['run.created...started', ...]
+/Users/shreyakale/ai-workforce-capstone/tests/test_api_idempotency.py:183: assert [200, 200] == [200, 409]
+/Users/shreyakale/ai-workforce-capstone/tests/test_api_idempotency.py:204: assert [200, 200] == [200, 409]
+/Users/shreyakale/ai-workforce-capstone/tests/test_api_idempotency.py:222: AssertionError: assert 'waiting_approval' == 'completed'
+/Users/shreyakale/ai-workforce-capstone/tests/test_api_idempotency.py:268: AssertionError: assert 0 == 1
+/Users/shreyakale/ai-workforce-capstone/tests/test_tools.py:62: assert 2 == 1
+=========================== short test summary info ============================
+FAILED tests/test_api_idempotency.py::test_repeated_start_while_waiting_changes_nothing
+FAILED tests/test_api_idempotency.py::test_concurrent_approve_and_reject_record_exactly_one_decision
+FAILED tests/test_api_idempotency.py::test_concurrent_approvals_record_one_grant_and_one_message
+FAILED tests/test_api_idempotency.py::test_approval_racing_start_requests_sends_one_message
+FAILED tests/test_api_idempotency.py::test_decision_is_enforced_across_orchestrator_instances
+FAILED tests/test_tools.py::test_message_tool_keeps_the_first_write_under_concurrency
+6 failed, 10 passed in 0.40s

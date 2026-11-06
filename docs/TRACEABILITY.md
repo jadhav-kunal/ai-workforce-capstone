@@ -23,5 +23,7 @@
 | Step-bound approval | Unauthorized action/replay | `resolve_approval` | Wrong state/step returns conflict |
 | Terminal rejection | Policy circumvention | `execute` terminal guard | Rejected run stays rejected |
 | Completed-step skip | Duplicate side effects | execution loop | Re-execute creates no second file |
+| Atomic approval decision | Conflicting or replayed decisions | `Repository.save_run_if_status` | Concurrent approve/reject records one decision |
+| Atomic outbox publish | Concurrent duplicate delivery | `AppMessageTool.execute` | Concurrent writers report one first delivery |
 | Sourced/scored lessons | Memory opacity | `add_memory` fields | Repository round-trip |
 
