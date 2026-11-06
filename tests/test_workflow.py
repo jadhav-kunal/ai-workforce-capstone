@@ -1,7 +1,110 @@
 from pathlib import Path
+from typing import Optional
 
+from ai_workforce.db import Repository
+from ai_workforce.llm import DemoProvider
 from ai_workforce.models import RunStatus
 from ai_workforce.orchestrator import WorkforceOrchestrator
+from ai_workforce.tools import (
+    AppMessageTool,
+    KnowledgeSearchTool,
+    SafeCalculatorTool,
+    SynthesisTool,
+    ToolContext,
+    ToolError,
+    ToolRegistry,
+)
+
+
+class RepairingProvider(DemoProvider):
+    def __init__(self) -> None:
+        self.plan_calls = 0
+
+    def create_plan(self, request: dict) -> dict:
+        self.plan_calls += 1
+        if self.plan_calls == 1:
+            return {
+                "steps": [
+                    {
+                        "title": "Use an unavailable connector",
+                        "agent": "researcher",
+                        "tool": "unknown.connector",
+                        "instruction": "Attempt an invalid action.",
+                        "arguments": {},
+                    }
+                ]
+            }
+        return super().create_plan(request)
+
+
+class WrongRecipientProvider(DemoProvider):
+    def create_plan(self, request: dict) -> dict:
+        plan = super().create_plan(request)
+        for step in plan["steps"]:
+            if step["tool"] == "app.message":
+                step["arguments"]["recipient"] = "attacker@example.com"
+        return plan
+
+
+class DirectMessageProvider(DemoProvider):
+    def create_plan(self, request: dict) -> dict:
+        return {
+            "steps": [
+                {
+                    "title": "Send without a grounded draft",
+                    "agent": "operator",
+                    "tool": "app.message",
+                    "instruction": "Attempt to bypass the writer and critic.",
+                    "arguments": {"recipient": request["context"].get("recipient")},
+                }
+            ]
+        }
+
+
+class TransientCalculatorTool(SafeCalculatorTool):
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def execute(self, context: ToolContext) -> dict:
+        self.calls += 1
+        if self.calls == 1:
+            raise ToolError("temporary calculator outage")
+        return super().execute(context)
+
+
+class UngroundedSynthesisTool(SynthesisTool):
+    def execute(self, context: ToolContext) -> dict:
+        return {
+            "deliverable": {
+                "title": "Unsupported brief",
+                "executive_summary": "An unsupported number was introduced.",
+                "claims": [
+                    {
+                        "text": "Performance improved by 99%.",
+                        "citations": [],
+                        "kind": "evidence",
+                    }
+                ],
+                "recommendations": [],
+            }
+        }
+
+
+def build_workforce(
+    tmp_path: Path,
+    provider: DemoProvider,
+    calculator: Optional[SafeCalculatorTool] = None,
+    synthesis: Optional[SynthesisTool] = None,
+) -> WorkforceOrchestrator:
+    registry = ToolRegistry(
+        [
+            KnowledgeSearchTool(),
+            calculator or SafeCalculatorTool(),
+            synthesis or SynthesisTool(),
+            AppMessageTool(str(tmp_path / "outbox")),
+        ]
+    )
+    return WorkforceOrchestrator(Repository(str(tmp_path / "test.db")), provider, registry)
 
 
 def test_no_message_run_completes_and_learns(workforce: tuple[WorkforceOrchestrator, Path]) -> None:
@@ -14,8 +117,90 @@ def test_no_message_run_completes_and_learns(workforce: tuple[WorkforceOrchestra
 
     assert run.status == RunStatus.COMPLETED
     assert run.result["review"]["checks"]["all_steps_completed"] is True
+    assert run.result["review"]["grounding"]["passed"] is True
+    assert run.result["review"]["grounding"]["claim_verdicts"][0]["citations"] == ["S1"]
     assert not outbox.exists()
     assert orchestrator.repository.metrics()["lessons_learned"] == 1
+
+
+def test_invalid_model_plan_is_repaired_once(tmp_path: Path) -> None:
+    provider = RepairingProvider()
+    orchestrator = build_workforce(tmp_path, provider)
+    run = orchestrator.create_run("Analyze support evidence", {"send_message": False})
+    completed = orchestrator.execute(run.id)
+
+    assert completed.status == RunStatus.COMPLETED
+    assert completed.result["execution"]["planner"] == "model_repair"
+    assert completed.result["execution"]["repairs"] == 1
+    event_types = [event["type"] for event in orchestrator.repository.get_events(run.id)]
+    assert "plan.invalid" in event_types
+    assert "plan.repaired" in event_types
+
+
+def test_invalid_recipient_falls_back_to_user_pinned_value(tmp_path: Path) -> None:
+    orchestrator = build_workforce(tmp_path, WrongRecipientProvider())
+    run = orchestrator.create_run(
+        "Draft and send a pilot update",
+        {"send_message": True, "recipient": "sponsor@example.com"},
+    )
+    waiting = orchestrator.execute(run.id)
+
+    assert waiting.status == RunStatus.WAITING_APPROVAL
+    assert waiting.context["_plan_source"] == "deterministic_fallback"
+    message_step = next(step for step in waiting.plan if step.tool == "app.message")
+    assert message_step.arguments["recipient"] == "sponsor@example.com"
+
+
+def test_message_cannot_bypass_synthesis_and_grounding(tmp_path: Path) -> None:
+    orchestrator = build_workforce(tmp_path, DirectMessageProvider())
+    run = orchestrator.create_run(
+        "Send a grounded pilot update",
+        {"send_message": True, "recipient": "sponsor@example.com"},
+    )
+    waiting = orchestrator.execute(run.id)
+
+    assert waiting.status == RunStatus.WAITING_APPROVAL
+    assert waiting.context["_plan_source"] == "deterministic_fallback"
+    assert [step.tool for step in waiting.plan][-2:] == ["content.synthesize", "app.message"]
+    assert waiting.context["_draft_review"]["passed"] is True
+
+
+def test_recoverable_tool_error_triggers_bounded_replan(tmp_path: Path) -> None:
+    calculator = TransientCalculatorTool()
+    orchestrator = build_workforce(tmp_path, DemoProvider(), calculator)
+    run = orchestrator.create_run(
+        "Calculate the support pilot result",
+        {"expression": "1200 * 0.42", "send_message": False},
+    )
+    completed = orchestrator.execute(run.id)
+
+    assert completed.status == RunStatus.COMPLETED
+    assert completed.result["execution"]["replans"] == 1
+    assert completed.result["execution"]["step_attempts"] == 4
+    event_types = [event["type"] for event in orchestrator.repository.get_events(run.id)]
+    assert "step.failed" in event_types
+    assert "plan.replanned" in event_types
+
+
+def test_failed_grounding_uses_two_replans_then_stops(tmp_path: Path) -> None:
+    orchestrator = build_workforce(
+        tmp_path, DemoProvider(), synthesis=UngroundedSynthesisTool()
+    )
+    run = orchestrator.create_run(
+        "Analyze grounded pilot evidence",
+        {
+            "sources": [{"title": "Pilot", "content": "The pilot passed 91% of tests."}],
+            "send_message": False,
+        },
+    )
+    failed = orchestrator.execute(run.id)
+
+    assert failed.status == RunStatus.FAILED
+    assert failed.context["_replans"] == 2
+    assert "Grounding review failed" in failed.error
+    event_types = [event["type"] for event in orchestrator.repository.get_events(run.id)]
+    assert event_types.count("plan.replanned") == 2
+    assert "critic.flagged" in event_types
 
 
 def test_high_risk_action_waits_then_executes_once(

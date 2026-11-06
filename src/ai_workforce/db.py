@@ -6,6 +6,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Optional
 
+from rank_bm25 import BM25Okapi
+
 from .models import PlanStep, RiskLevel, Run, RunStatus, StepStatus, utc_now
 
 SCHEMA = """
@@ -27,6 +29,7 @@ CREATE TABLE IF NOT EXISTS steps (
     agent TEXT NOT NULL,
     tool TEXT NOT NULL,
     instruction TEXT NOT NULL,
+    arguments_json TEXT NOT NULL DEFAULT '{}',
     risk TEXT NOT NULL,
     status TEXT NOT NULL,
     output_json TEXT,
@@ -75,6 +78,13 @@ class Repository:
     def initialize(self) -> None:
         with self._lock, self.connection() as connection:
             connection.executescript(SCHEMA)
+            step_columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(steps)").fetchall()
+            }
+            if "arguments_json" not in step_columns:
+                connection.execute(
+                    "ALTER TABLE steps ADD COLUMN arguments_json TEXT NOT NULL DEFAULT '{}'"
+                )
 
     def save_run(self, run: Run) -> None:
         with self._lock, self.connection() as connection:
@@ -99,8 +109,9 @@ class Repository:
             connection.execute("DELETE FROM steps WHERE run_id = ?", (run.id,))
             connection.executemany(
                 """INSERT INTO steps
-                (id, run_id, position, title, agent, tool, instruction, risk, status, output_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (id, run_id, position, title, agent, tool, instruction, arguments_json,
+                 risk, status, output_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 [
                     (
                         step.id,
@@ -110,6 +121,7 @@ class Repository:
                         step.agent,
                         step.tool,
                         step.instruction,
+                        json.dumps(step.arguments),
                         step.risk.value,
                         step.status.value,
                         json.dumps(step.output) if step.output is not None else None,
@@ -143,6 +155,7 @@ class Repository:
                 agent=step["agent"],
                 tool=step["tool"],
                 instruction=step["instruction"],
+                arguments=json.loads(step["arguments_json"]),
                 risk=RiskLevel(step["risk"]),
                 status=StepStatus(step["status"]),
                 output=json.loads(step["output_json"]) if step["output_json"] else None,
@@ -193,17 +206,46 @@ class Repository:
                 (objective_key, lesson, score, run_id, utc_now()),
             )
 
-    def search_memories(self, terms: list[str], limit: int = 5) -> list[dict[str, Any]]:
+    def search_memories(
+        self, terms: list[str], limit: int = 3, minimum_score: float = 0.7
+    ) -> list[dict[str, Any]]:
         if not terms:
             return []
-        patterns = [f"%{term.lower()}%" for term in terms[:8]]
-        where = " OR ".join(["lower(objective_key) LIKE ?"] * len(patterns))
         with self.connection() as connection:
             rows = connection.execute(
-                f"SELECT * FROM memories WHERE {where} ORDER BY score DESC, id DESC LIMIT ?",
-                (*patterns, limit),
+                """SELECT * FROM memories WHERE score >= ?
+                ORDER BY score DESC, id DESC LIMIT 100""",
+                (minimum_score,),
             ).fetchall()
-        return [dict(row) for row in rows]
+        memories = [dict(row) for row in rows]
+        query = [term.lower() for term in terms[:8]]
+        candidates = [
+            memory
+            for memory in memories
+            if set(query)
+            & set(self._tokens(f"{memory['objective_key']} {memory['lesson']}"))
+        ]
+        if not candidates:
+            return []
+        corpus = [
+            self._tokens(f"{memory['objective_key']} {memory['lesson']}")
+            for memory in candidates
+        ]
+        scores = BM25Okapi(corpus).get_scores(query)
+        ranked = sorted(
+            zip(candidates, scores),
+            key=lambda item: (float(item[1]), float(item[0]["score"]), int(item[0]["id"])),
+            reverse=True,
+        )
+        return [memory for memory, _ in ranked[:limit]]
+
+    @staticmethod
+    def _tokens(value: str) -> list[str]:
+        return [
+            "".join(character for character in word.lower() if character.isalnum())
+            for word in value.split()
+            if any(character.isalnum() for character in word)
+        ]
 
     def metrics(self) -> dict[str, Any]:
         with self.connection() as connection:

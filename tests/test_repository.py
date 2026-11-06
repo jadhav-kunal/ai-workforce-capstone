@@ -13,6 +13,7 @@ def test_repository_round_trip_and_metrics(tmp_path: Path) -> None:
             agent="researcher",
             tool="knowledge.search",
             instruction="go",
+            arguments={"query": "durable state", "k": 3},
         )
     ]
     run.plan[0].status = StepStatus.COMPLETED
@@ -27,6 +28,7 @@ def test_repository_round_trip_and_metrics(tmp_path: Path) -> None:
     assert restored is not None
     assert restored.status == RunStatus.COMPLETED
     assert restored.plan[0].output["findings"][0]["title"] == "Evidence"
+    assert restored.plan[0].arguments["query"] == "durable state"
     assert repository.get_events(run.id)[0]["actor"] == "manager"
     assert repository.search_memories(["durable"])[0]["source_run_id"] == run.id
     assert repository.metrics()["success_rate"] == 1
