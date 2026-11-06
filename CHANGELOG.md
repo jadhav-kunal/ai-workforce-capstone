@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0 — 2026-11-06
+
+- Added provider-generated typed plans with strict schema and tool-argument validation.
+- Added one plan-repair attempt followed by a deterministic fallback.
+- Added bounded replanning with an eight-step attempt cap and two-replan cap.
+- Added stable passage IDs, BM25 evidence ranking, and claim-level grounding checks.
+- Added one writer revision before high-risk approval when grounding fails.
+- Added BM25 top-three lesson retrieval and source-run provenance.
+- Added deterministic run-and-step idempotency for simulated messages.
+- Added three-attempt exponential backoff for OpenAI-compatible requests.
+- Expanded verification to 19 passing tests with 82% total coverage.
+
 ## 1.0.0 — 2026-09-04
 
 - Added durable manager/planner/executor/critic orchestration.

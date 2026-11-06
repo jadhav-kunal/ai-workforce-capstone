@@ -59,20 +59,22 @@ function renderDetail(run) {
   const plan = run.plan.map((step, index) => `
     <div class="step ${esc(step.status)}">
       <span class="step-dot">${step.status === 'completed' ? '✓' : index + 1}</span>
-      <div><h4>${esc(step.title)}</h4><p>${esc(step.agent)} · ${esc(step.tool)} · ${esc(step.risk)} risk</p></div>
+      <div><h4>${esc(step.title)}</h4><p>${esc(step.agent)} · ${esc(step.tool)} · ${esc(step.risk)} risk${Object.keys(step.arguments || {}).length ? ` · ${esc(JSON.stringify(step.arguments))}` : ''}</p></div>
     </div>`).join('');
   const approval = waiting ? `<div class="approval"><p><strong>Human decision required.</strong><br>This step creates an external-facing artifact in the simulated outbox.</p><button data-approve="true">Approve & continue</button><button class="reject" data-approve="false">Reject</button></div>` : '';
   const calculation = run.result?.artifacts?.find(item => Object.hasOwn(item, 'value'));
   const research = run.result?.artifacts?.find(item => item.findings);
   const message = run.result?.artifacts?.find(item => item.message);
-  const evidence = research?.findings?.map((item, index) => `<li><b>S${index + 1}</b> ${esc(item.title)}</li>`).join('') || '';
+  const evidence = research?.findings?.map((item, index) => `<li><b>${esc(item.id || `S${index + 1}`)}</b> ${esc(item.title)}</li>`).join('') || '';
+  const execution = run.result?.execution;
   const result = run.result ? `<div class="result">
-    <div class="result-head"><h4>Verified run result</h4><strong>${Math.round(run.result.review.quality_score * 100)}% structural score</strong></div>
+    <div class="result-head"><h4>Verified run result</h4><strong>${Math.round(run.result.review.quality_score * 100)}% grounding score</strong></div>
     <div class="result-grid">
       <div><small>EVIDENCE</small><b>${research?.source_count || 0} supplied passages</b>${evidence ? `<ul>${evidence}</ul>` : ''}</div>
       <div><small>CALCULATION</small><b>${calculation ? `${esc(calculation.expression)} = ${esc(calculation.value)}` : 'Not requested'}</b></div>
       <div><small>POLICY OUTCOME</small><b>${message ? `Approved · ${esc(message.message.delivery)} only` : 'No outbound artifact'}</b></div>
     </div>
+    ${execution ? `<p><b>Execution:</b> ${esc(execution.planner)} planner · ${esc(execution.step_attempts)} attempts · ${esc(execution.replans)} replans · ${esc(execution.draft_revisions)} revisions</p>` : ''}
     <p>${esc(run.result.review.reflection)}</p>
     <details><summary>Exact artifact JSON</summary><pre>${esc(JSON.stringify(run.result.artifacts, null, 2))}</pre></details>
   </div>` : (run.error ? `<div class="result"><h4>Run error</h4><p>${esc(run.error)}</p></div>` : '');

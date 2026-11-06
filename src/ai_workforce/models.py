@@ -43,6 +43,7 @@ class PlanStep:
     agent: str
     tool: str
     instruction: str
+    arguments: dict[str, Any] = field(default_factory=dict)
     risk: RiskLevel = RiskLevel.LOW
     id: str = field(default_factory=lambda: new_id("step"))
     status: StepStatus = StepStatus.PENDING

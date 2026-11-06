@@ -44,7 +44,8 @@ This separation makes key policies testable without a live model. A malformed or
 ### 4.2 Agent roles
 
 - Manager owns the objective and makes prior lessons visible.
-- Planner emits an ordered workflow using the available capability set.
+- Planner requests an ordered workflow from the configured provider, validates it against strict
+  tool schemas, permits one repair, and otherwise uses a deterministic fallback.
 - Researcher collects supplied evidence with provenance.
 - Analyst performs arithmetic through a restricted AST evaluator.
 - Writer produces a structured action brief.
@@ -61,15 +62,24 @@ The included connector writes JSON to a local outbox. This simulates an external
 
 ### 4.4 Memory
 
-Keywords from the objective form a simple retrieval key. The critic stores a lesson, quality score, source run, and timestamp. Related future objectives retrieve highest-scoring matches, and the manager records them in delegation context. Lexical retrieval is intentionally understandable; semantic embeddings are a documented extension.
+Keywords from the objective form a retrieval query. The critic stores a lesson, quality score,
+source run, and timestamp. Related future objectives retrieve up to three qualifying lessons with
+BM25, and the manager records them and their source run IDs in delegation context. Lexical retrieval
+is intentionally understandable; semantic embeddings remain a documented extension.
 
 ## 5. Implementation
 
 The backend uses Python and FastAPI. SQLite was selected because it is transactional, inspectable, and requires no service for a single-node capstone. The dashboard is dependency-light HTML, CSS, and JavaScript served by the API. A small SDK provides an embeddable facade. Environment variables select a deterministic provider or an OpenAI-compatible Chat Completions endpoint.
 
-The tool registry currently contains knowledge search, safe arithmetic, content synthesis, and simulated application messaging. Tool outputs are dictionaries so they can be recorded, displayed, and evaluated consistently. Errors become terminal failed runs with events instead of disappearing in server logs.
+The tool registry currently contains BM25 passage search with stable IDs, safe arithmetic, grounded
+content synthesis, and simulated application messaging. Tool outputs are dictionaries so they can be
+recorded, displayed, and evaluated consistently. A critic checks each claim's citation and numeric
+support before a high-risk action and permits one writer revision. Recoverable failures can cause up
+to two replans within a global eight-step-attempt budget; exhausted failures remain durable events.
 
-The codebase includes unit tests for calculation safety and repositories, workflow tests for approval/rejection/memory, API tests for validation and transitions, Docker packaging, configuration examples, and a scripted demonstration.
+The codebase includes 19 tests for calculation safety, repositories, approval/rejection, memory,
+plan repair and fallback, recipient pinning, bounded replanning, grounding, idempotency, and API
+transitions, plus Docker packaging, configuration examples, and a scripted demonstration.
 
 ## 6. Evaluation methodology
 
@@ -89,17 +99,22 @@ The project also rejects the simplistic implication that “AI workforce” make
 
 ## 8. Results and expected evidence
 
-In deterministic mode, the implemented vertical slice produces a plan, extracts supplied source records, calculates a requested metric, generates a brief, and pauses before messaging. Approval creates one outbox artifact, completes the run, records the critic review, and increments lesson metrics. Rejection creates no artifact. A related second objective receives the earlier lesson in its delegation context. Automated tests encode these claims and should be reported with the exact environment and commit used for the final submission.
+In deterministic mode, the implemented vertical slice produces and validates a plan, ranks supplied
+source records, calculates a requested metric, verifies a citation-bearing brief, and pauses before
+messaging. Approval creates one idempotent outbox artifact, completes the run, records the critic
+review, and increments lesson metrics. Rejection creates no artifact. A related second objective
+receives a BM25-ranked lesson in its delegation context. On Python 3.9.6, the current automated suite
+passes 19 tests with 82% total statement coverage.
 
 The capstone avoids fabricating benchmark numbers in advance. The included evaluation sheet is the place to record final repeated-run latency, pass rate, and human scores during the study.
 
 ## 9. Limitations
 
 - The deterministic provider proves orchestration, not open-ended reasoning quality.
-- Planning is intentionally constrained to a known research-to-action workflow.
+- Demo planning is deterministic; live model planning quality has not yet been benchmarked.
 - The local outbox does not test real connector authentication or delivery failures.
 - SQLite and in-process background tasks are single-node choices.
-- Memory uses lexical matching and has no automated conflict resolution or deletion UI.
+- Memory uses BM25 lexical matching and has no automated conflict resolution or deletion UI.
 - The heuristic reviewer does not measure factual correctness.
 - The API has no authentication and must remain local.
 
@@ -107,7 +122,11 @@ These limitations bound the claims and identify concrete future work rather than
 
 ## 10. Future work
 
-The next stage would add authenticated identities and per-agent tool scopes, durable queued workers, PostgreSQL concurrency controls, real connectors with transactional idempotency, semantic memory with lifecycle management, policy-as-code, provider/token budgets, OpenTelemetry traces, and representative live-model evaluations. A longer-term study could compare single-agent, manager-worker, and deliberative multi-agent topologies under equal token and time budgets.
+The next stage would add authenticated identities and per-agent tool scopes, durable queued workers,
+PostgreSQL concurrency controls, real connectors with transactional outboxes, semantic memory with
+lifecycle management, policy-as-code, explicit provider token/cost budgets, OpenTelemetry traces,
+and representative live-model evaluations. A longer-term study could compare single-agent,
+manager-worker, and deliberative multi-agent topologies under equal token and time budgets.
 
 ## 11. Conclusion
 

@@ -27,7 +27,9 @@ Returns `202 Accepted` with a queued run. Execution occurs in a background task;
 GET /api/runs/{run_id}
 ```
 
-The representation contains the objective, status, context, ordered plan, outputs, final review, error, and event trace. Status is one of `queued`, `running`, `waiting_approval`, `completed`, `failed`, or `rejected`.
+The representation contains the objective, status, context, ordered plan, validated step arguments,
+outputs, final grounding review, execution counters, error, and event trace. Status is one of
+`queued`, `running`, `waiting_approval`, `completed`, `failed`, or `rejected`.
 
 ## Resolve an approval
 
@@ -68,7 +70,10 @@ The UI is the easiest way to resolve the generated step ID during a live demo.
 
 ## Error model
 
-Input validation returns FastAPI’s standard `422` response. Missing runs return `404`. An approval against the wrong run state/step returns `409`. Execution errors are persisted on the run with status `failed` rather than discarded as transient HTTP failures.
+Input validation returns FastAPI’s standard `422` response. Missing runs return `404`. An approval
+against the wrong run state/step returns `409`. Execution errors first become persisted step
+observations. The runtime can replan remaining work twice within the global eight-step-attempt
+budget. Exhausted or unrecoverable errors are persisted with status `failed`.
 
 ## Production additions
 

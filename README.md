@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
-[![Tests](https://img.shields.io/badge/tests-12%20passing-2E7D32)](#testing-and-verification)
+[![Tests](https://img.shields.io/badge/tests-19%20passing-2E7D32)](#testing-and-verification)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 AI Workforce is an individual CSE 598 capstone project and runnable baseline. It demonstrates that useful agent automation needs more than prompt chaining: it needs explicit delegation, bounded tool access, persistent state, human control, auditability, and a safe improvement loop.
@@ -58,8 +58,12 @@ A run succeeds when it completes the intended workflow, every step and output is
 | Bounded cross-run learning | Implemented | Critic score and sourced lesson memory |
 | Offline deterministic execution | Implemented | Default `demo` provider |
 | OpenAI-compatible model provider | Implemented | Optional environment configuration |
+| Validated model-generated planning | Implemented | Strict tool schemas, one repair, then deterministic fallback |
+| Bounded recovery and replanning | Implemented | Maximum 8 attempted steps and 2 replans per run |
+| Claim-level grounding review | Implemented | Passage IDs, numeric checks, and one writer revision |
+| Ranked lesson reuse | Implemented | BM25 retrieval of up to 3 scored prior lessons |
+| Idempotent simulated delivery | Implemented | Stable run-and-step key suppresses duplicate outbox writes |
 | Real external application delivery | Planned | Current message connector uses a simulated local outbox |
-| Dynamic model-generated planning | Planned | Baseline planner is intentionally constrained |
 
 ## Baseline screenshots
 
@@ -202,7 +206,7 @@ The verified run produced these key fields:
     "review": {
       "quality_score": 0.85,
       "checks": {
-        "has_evidence": true,
+        "has_evidence": false,
         "all_steps_completed": true,
         "external_action_guarded": true
       }
@@ -371,10 +375,10 @@ Current verified result on Python 3.9.6:
 
 ```text
 All checks passed!
-............                                                     [100%]
-12 passed
-TOTAL test coverage: 78%
-Orchestrator coverage: 94%
+...................                                              [100%]
+19 passed in 0.72s
+TOTAL test coverage: 82%
+Planner/critic coverage (`agents.py`): 94%
 ```
 
 The test suite covers:
@@ -387,6 +391,12 @@ The test suite covers:
 - SQLite persistence and metrics;
 - cross-run lesson reuse;
 - API lifecycle and request validation.
+- schema validation with one model-plan repair and deterministic fallback;
+- recipient pinning against model-generated destination changes;
+- bounded replanning after a recoverable tool failure;
+- grounding-triggered replanning and a hard stop after the second replan;
+- passage-level grounding and calculation consistency checks;
+- deterministic message idempotency.
 
 ## Evaluation plan
 
@@ -414,12 +424,12 @@ The baseline deliberately proves the workflow and governance contracts before ad
 - Add evidence-quality and contradiction checks.
 - Evaluate factuality against a fixed answer set.
 
-### Phase 2 — Constrained dynamic planning
+### Phase 2 — Constrained dynamic planning (core complete)
 
-- Let a model select and order steps from typed tool schemas.
-- Validate every generated plan before execution.
-- Add task, time, token, and cost budgets.
-- Support recovery and replanning after safe, non-side-effect failures.
+- Model/provider selects and orders steps from typed tool schemas.
+- Every generated plan is validated, repaired once, then safely falls back.
+- Global step attempts are capped at 8 and recovery replans at 2.
+- Remaining work is explicit token, time, and cost accounting for live providers.
 
 ### Phase 3 — Stronger memory and self-improvement
 
@@ -432,7 +442,7 @@ The baseline deliberately proves the workflow and governance contracts before ad
 
 - Add one authenticated connector, initially Slack, email, or a task system.
 - Enforce least-privilege scopes and destination allowlists.
-- Add idempotency keys, retries, rate limits, and a transactional outbox.
+- Extend the implemented idempotency key to rate limits and a transactional outbox.
 - Bind approvals to authenticated actors, exact payload previews, and expiration times.
 
 ### Phase 5 — Production-oriented control plane
@@ -449,7 +459,7 @@ The baseline deliberately proves the workflow and governance contracts before ad
 | M1 — Baseline | Reproducible research-to-brief workflow — complete |
 | M2 — Governed action | Human approval prevents unauthorized execution — complete |
 | M3 — Source grounding | Research connectors and citation evaluation |
-| M4 — Dynamic planning | Validated model-generated plans with budgets |
+| M4 — Dynamic planning | Core complete: validated plans, repair/fallback, and step/replan budgets |
 | M5 — Improved memory | Semantic, reviewable lessons with ablation evaluation |
 | M6 — Final evaluation | Baseline comparison, human rubric, and failure analysis |
 
@@ -464,14 +474,19 @@ The baseline deliberately proves the workflow and governance contracts before ad
 - Terminal rejection that cannot be silently routed around
 - Restricted AST calculator instead of arbitrary code execution
 - Durable event and output trace
+- Strict typed plan and tool-argument validation
+- One plan repair followed by a deterministic safe fallback
+- Maximum 8 attempted steps and 2 recovery replans
+- Claim-level citation and numeric grounding checks before messaging
+- Deterministic message idempotency key bound to run and exact step
 - Simulated connector instead of real message delivery
 
 ### Known limitations
 
-- The baseline planner follows a fixed research-to-action pattern.
+- Demo mode emits a deterministic plan; live-provider planning quality still requires evaluation.
 - Demo-mode synthesis is deterministic and does not establish live-model quality.
 - Missing sources are disclosed, but the baseline does not retrieve sources itself.
-- Memory retrieval is lexical and may miss semantically related objectives.
+- BM25 memory retrieval is lexical and may miss semantically related objectives.
 - The quality score measures workflow structure, not factual accuracy.
 - SQLite and in-process background execution are single-node choices.
 - The local API has no authentication and must not be exposed to the internet.

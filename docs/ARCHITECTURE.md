@@ -17,6 +17,7 @@ flowchart TB
     ORCH[Orchestrator state machine]
     MAN[Manager]
     PLAN[Planner]
+    VALID[Plan + argument validator]
     CRIT[Critic]
     POLICY[Approval policy]
   end
@@ -40,6 +41,8 @@ flowchart TB
   CLI --> ORCH
   API --> ORCH
   ORCH --> MAN & PLAN & CRIT & POLICY
+  PLAN --> VALID
+  VALID --> ORCH
   ORCH --> REG
   REG --> KNOW & CALC & SYN & MSG
   ORCH --> SQL
@@ -58,20 +61,23 @@ stateDiagram-v2
   waiting_approval --> rejected: reject
   queued --> running: resume
   running --> completed: all steps + review
-  running --> failed: tool/provider error
+  running --> running: recoverable error + replan
+  running --> failed: budget exhausted or unrecoverable error
   completed --> [*]
   rejected --> [*]
   failed --> [*]
 ```
 
-Terminal runs are immutable through the public orchestration flow. Completed steps are skipped on resume, which provides basic at-most-once behavior inside one process. Connector-level idempotency keys are required before real integrations are introduced.
+Terminal runs are immutable through the public orchestration flow. Completed steps are skipped on
+resume. The simulated message connector also derives a stable idempotency key from the run and exact
+step ID, so a repeated invocation returns the original artifact instead of writing a duplicate.
 
 ## Data model
 
 | Table | Purpose | Notable fields |
 |---|---|---|
 | `runs` | Objective and top-level lifecycle | status, context, result, error, timestamps |
-| `steps` | Ordered execution plan | agent, tool, risk, status, output |
+| `steps` | Ordered execution plan | agent, tool, validated arguments, risk, status, output |
 | `events` | Append-only operational trace | event type, actor, JSON payload, timestamp |
 | `memories` | Cross-run lessons | objective key, lesson, quality score, source run |
 
@@ -80,13 +86,18 @@ SQLite is adequate for a single-node evaluator. A production evolution would use
 ## Agent contracts
 
 - **Manager:** owns the objective and delegation strategy; cannot call application tools directly.
-- **Planner:** maps an objective to typed steps using only registered tools.
+- **Planner:** requests typed steps from the configured provider, validates the tool and arguments,
+  repairs an invalid plan once, and otherwise uses the deterministic fallback.
 - **Researcher/analyst/writer/operator:** execution identities recorded on each step.
-- **Critic:** evaluates only after execution and can write lesson memory, not alter the completed result.
+- **Critic:** verifies draft grounding before high-risk messaging, allows one writer revision, and
+  evaluates the completed run before writing lesson memory.
 
 ## Tool contract
 
-Each tool has a unique name, description, declared risk, one structured input context, and JSON-serializable output. A tool cannot choose its own authority. The orchestrator evaluates risk before invocation.
+Each tool has a unique name, description, declared risk, a strict Pydantic argument schema, one
+structured input context, and JSON-serializable output. A tool cannot choose its own authority. The
+orchestrator validates model-proposed arguments and evaluates risk before invocation. A message
+recipient supplied by the user is pinned and cannot be replaced by the planner.
 
 Current tools:
 
@@ -103,20 +114,24 @@ Current tools:
 
 1. Critic calculates a transparent quality score.
 2. Critic records a lesson with its source run and objective keywords.
-3. A later related objective retrieves top-scoring lessons.
+3. A later related objective retrieves up to three qualifying lessons using BM25 ranking.
 4. Manager includes them in delegation context.
 
 This approach is reversible and auditable. It avoids autonomous prompt/code changes, reward hacking, and silent policy drift.
 
 ## Failure handling
 
-Exceptions become a durable `failed` run with a sanitized type/message and `run.failed` event. Completed steps remain persisted. The caller can inspect the trace. Automated retries are excluded from MVP because a safe retry policy depends on connector idempotency and error classification.
+Tool exceptions become durable `step.failed` observations. The planner may rebuild only the
+remaining work up to two times while preserving completed steps and the global eight-attempt budget.
+If recovery fails or the budget is exhausted, the run becomes `failed` with a `run.failed` event.
+OpenAI-compatible requests use three attempts with exponential backoff. Simulated messages are safe
+against duplicate writes through their run-and-step idempotency key.
 
 ## Scaling path
 
 1. Replace in-process background tasks with a durable queue and leased workers.
 2. Migrate SQLite to PostgreSQL with optimistic concurrency/version columns.
 3. Add OIDC, tenant IDs, RBAC, encrypted secrets, and per-tool scopes.
-4. Implement connector idempotency, retries, rate limits, and dead-letter queues.
+4. Extend local idempotency to transactional connector outboxes, rate limits, and dead-letter queues.
 5. Add OpenTelemetry traces, cost/token budgets, evaluation sampling, and alerts.
 

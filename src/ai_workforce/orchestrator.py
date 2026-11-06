@@ -1,10 +1,16 @@
 import threading
 from typing import Any, Optional
 
-from .agents import AgentContext, CriticAgent, ManagerAgent, PlannerAgent
+from .agents import (
+    AgentContext,
+    CriticAgent,
+    ManagerAgent,
+    PlannerAgent,
+    PlanValidationError,
+)
 from .db import Repository
 from .llm import LLMProvider, extract_terms
-from .models import Run, RunStatus, StepStatus, utc_now
+from .models import RiskLevel, Run, RunStatus, StepStatus, utc_now
 from .tools import ToolContext, ToolRegistry
 
 
@@ -29,7 +35,7 @@ class WorkforceOrchestrator:
         self.tools = tools
         self.auto_approve = auto_approve
         self.manager = ManagerAgent()
-        self.planner = PlannerAgent()
+        self.planner = PlannerAgent(provider, tools)
         self.critic = CriticAgent(provider, repository)
         self._run_locks: dict[str, threading.Lock] = {}
         self._lock_guard = threading.Lock()
@@ -38,6 +44,11 @@ class WorkforceOrchestrator:
         if not objective.strip():
             raise ValueError("Objective cannot be empty")
         run = Run(objective=objective.strip(), context=context or {})
+        run.context.setdefault("_replans", 0)
+        run.context.setdefault("_repairs", 0)
+        run.context.setdefault("_revisions", 0)
+        run.context.setdefault("_step_attempts", 0)
+        run.context.setdefault("_observations", [])
         self.repository.save_run(run)
         self.repository.add_event(run.id, "run.created", "user", {"objective": run.objective})
         return run
@@ -56,74 +67,128 @@ class WorkforceOrchestrator:
 
     def _execute_locked(self, run_id: str) -> Run:
         run = self._require_run(run_id)
-        if run.status in {RunStatus.COMPLETED, RunStatus.REJECTED}:
+        if run.status in {RunStatus.COMPLETED, RunStatus.REJECTED, RunStatus.FAILED}:
             return run
+        was_resuming = bool(run.plan)
         run.status = RunStatus.RUNNING
+        run.error = None
         run.updated_at = utc_now()
         self.repository.save_run(run)
-        self.repository.add_event(run.id, "run.started", "manager", {})
+        self.repository.add_event(
+            run.id, "run.resumed" if was_resuming else "run.started", "manager", {}
+        )
         try:
             if not run.plan:
-                memories = self.repository.search_memories(extract_terms(run.objective))
-                agent_context = AgentContext(run=run, memories=memories)
-                delegation = self.manager.delegate(agent_context)
-                run.plan = self.planner.create_plan(agent_context)
-                run.context["delegation"] = delegation
-                self.repository.save_run(run)
-                self.repository.add_event(
-                    run.id,
-                    "plan.created",
-                    "planner",
-                    {"steps": [step.to_dict() for step in run.plan]},
-                )
+                self._create_initial_plan(run)
 
-            approved = set(run.context.get("_approved_steps", []))
-            prior_outputs = [step.output for step in run.plan if step.output]
-            for step in run.plan:
-                if step.status == StepStatus.COMPLETED:
-                    continue
-                if step.risk.value == "high" and not self.auto_approve and step.id not in approved:
-                    step.status = StepStatus.WAITING_APPROVAL
-                    run.status = RunStatus.WAITING_APPROVAL
-                    run.updated_at = utc_now()
+            while True:
+                replanned = False
+                approved = set(run.context.get("_approved_steps", []))
+                prior_outputs = [step.output for step in run.plan if step.output]
+                for step in run.plan:
+                    if step.status == StepStatus.COMPLETED:
+                        continue
+                    if step.risk == RiskLevel.HIGH and step.id not in approved:
+                        if self.auto_approve:
+                            approved.add(step.id)
+                            run.context["_approved_steps"] = sorted(approved)
+                            self.repository.add_event(
+                                run.id, "approval.auto_granted", "policy", {"step_id": step.id}
+                            )
+                        else:
+                            step.status = StepStatus.WAITING_APPROVAL
+                            run.status = RunStatus.WAITING_APPROVAL
+                            run.updated_at = utc_now()
+                            self.repository.save_run(run)
+                            self.repository.add_event(
+                                run.id,
+                                "approval.requested",
+                                "policy",
+                                {
+                                    "step_id": step.id,
+                                    "title": step.title,
+                                    "risk": step.risk.value,
+                                    "grounding_passed": run.context.get("_draft_review", {}).get(
+                                        "passed"
+                                    ),
+                                },
+                            )
+                            return run
+                    if int(run.context.get("_step_attempts", 0)) >= 8:
+                        raise RuntimeError("Global eight-step execution budget exhausted")
+                    run.context["_step_attempts"] = int(
+                        run.context.get("_step_attempts", 0)
+                    ) + 1
+                    step.status = StepStatus.RUNNING
                     self.repository.save_run(run)
                     self.repository.add_event(
                         run.id,
-                        "approval.requested",
-                        "policy",
-                        {"step_id": step.id, "title": step.title, "risk": step.risk.value},
+                        "step.started",
+                        step.agent,
+                        {
+                            "step_id": step.id,
+                            "tool": step.tool,
+                            "arguments": step.arguments,
+                        },
                     )
-                    return run
-                step.status = StepStatus.RUNNING
-                self.repository.save_run(run)
-                self.repository.add_event(
-                    run.id, "step.started", step.agent, {"step_id": step.id, "tool": step.tool}
-                )
-                tool = self.tools.get(step.tool)
-                step.output = tool.execute(
-                    ToolContext(
-                        run_id=run.id,
-                        objective=run.objective,
-                        instruction=step.instruction,
-                        prior_outputs=prior_outputs,
-                        inputs=run.context,
+                    try:
+                        step.output = self._execute_step(run, step, prior_outputs)
+                    except Exception as exc:
+                        error = f"{type(exc).__name__}: {exc}"
+                        step.status = StepStatus.FAILED
+                        step.output = {"error": error}
+                        self.repository.save_run(run)
+                        self.repository.add_event(
+                            run.id,
+                            "step.failed",
+                            step.agent,
+                            {"step_id": step.id, "tool": step.tool, "error": error},
+                        )
+                        if self._replan(run, step, error):
+                            replanned = True
+                            break
+                        raise
+                    prior_outputs.append(step.output)
+                    step.status = StepStatus.COMPLETED
+                    self.repository.save_run(run)
+                    self.repository.add_event(
+                        run.id,
+                        "step.completed",
+                        step.agent,
+                        {"step_id": step.id, "output": step.output},
                     )
-                )
-                prior_outputs.append(step.output)
-                step.status = StepStatus.COMPLETED
-                self.repository.save_run(run)
-                self.repository.add_event(
-                    run.id,
-                    "step.completed",
-                    step.agent,
-                    {"step_id": step.id, "output": step.output},
-                )
+                    if step.tool == "content.synthesize":
+                        grounding = self._verify_and_revise(run, step, prior_outputs)
+                        if not grounding["passed"]:
+                            error = "Grounding review failed after the allowed writer revision"
+                            step.status = StepStatus.FAILED
+                            self.repository.save_run(run)
+                            self.repository.add_event(
+                                run.id,
+                                "step.failed",
+                                step.agent,
+                                {"step_id": step.id, "tool": step.tool, "error": error},
+                            )
+                            if self._replan(run, step, error):
+                                replanned = True
+                                break
+                            raise RuntimeError(error)
+                if replanned:
+                    continue
+                break
 
             review = self.critic.evaluate(run)
             run.result = {
                 "summary": "All delegated tasks completed successfully.",
-                "artifacts": prior_outputs,
+                "artifacts": [step.output for step in run.plan if step.output],
                 "review": review,
+                "execution": {
+                    "planner": run.context.get("_plan_source"),
+                    "repairs": run.context.get("_repairs", 0),
+                    "replans": run.context.get("_replans", 0),
+                    "draft_revisions": run.context.get("_revisions", 0),
+                    "step_attempts": run.context.get("_step_attempts", 0),
+                },
             }
             run.status = RunStatus.COMPLETED
             run.updated_at = utc_now()
@@ -137,6 +202,141 @@ class WorkforceOrchestrator:
             self.repository.save_run(run)
             self.repository.add_event(run.id, "run.failed", "manager", {"error": run.error})
             return run
+
+    def _create_initial_plan(self, run: Run) -> None:
+        memories = self.repository.search_memories(extract_terms(run.objective), limit=3)
+        agent_context = AgentContext(run=run, memories=memories)
+        run.context["delegation"] = self.manager.delegate(agent_context)
+        try:
+            run.plan = self.planner.create_plan(agent_context)
+            source = "model"
+        except PlanValidationError as first_error:
+            run.context["_repairs"] = 1
+            self.repository.add_event(
+                run.id, "plan.invalid", "validator", {"error": str(first_error), "attempt": 1}
+            )
+            try:
+                run.plan = self.planner.create_plan(
+                    agent_context, validation_error=str(first_error)
+                )
+                source = "model_repair"
+                self.repository.add_event(
+                    run.id, "plan.repaired", "planner", {"error": str(first_error)}
+                )
+            except PlanValidationError as second_error:
+                run.plan = self.planner.fallback_plan(agent_context)
+                source = "deterministic_fallback"
+                self.repository.add_event(
+                    run.id,
+                    "plan.fallback",
+                    "planner",
+                    {"errors": [str(first_error), str(second_error)]},
+                )
+        run.context["_plan_source"] = source
+        self.repository.save_run(run)
+        self.repository.add_event(
+            run.id,
+            "plan.created",
+            "planner",
+            {"source": source, "steps": [step.to_dict() for step in run.plan]},
+        )
+
+    def _execute_step(
+        self, run: Run, step: Any, prior_outputs: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        tool = self.tools.get(step.tool)
+        inputs = dict(run.context)
+        inputs.update(step.arguments)
+        return tool.execute(
+            ToolContext(
+                run_id=run.id,
+                step_id=step.id,
+                objective=run.objective,
+                instruction=step.instruction,
+                prior_outputs=prior_outputs,
+                inputs=inputs,
+            )
+        )
+
+    def _replan(self, run: Run, failed_step: Any, error: str) -> bool:
+        replans = int(run.context.get("_replans", 0))
+        if replans >= 2 or int(run.context.get("_step_attempts", 0)) >= 8:
+            return False
+        run.context["_replans"] = replans + 1
+        run.context.setdefault("_observations", []).append(
+            {"tool": failed_step.tool, "step_id": failed_step.id, "error": error}
+        )
+        completed_steps = [
+            step
+            for step in run.plan
+            if step.status == StepStatus.COMPLETED and step.id != failed_step.id
+        ]
+        completed_tools = [step.tool for step in completed_steps]
+        memories = self.repository.search_memories(extract_terms(run.objective), limit=3)
+        context = AgentContext(run=run, memories=memories)
+        try:
+            remaining = self.planner.create_plan(
+                context, validation_error=error, completed_tools=completed_tools
+            )
+            source = "model_replan"
+        except PlanValidationError as plan_error:
+            remaining = self.planner.fallback_plan(context, completed_tools=completed_tools)
+            source = "fallback_replan"
+            self.repository.add_event(
+                run.id, "replan.invalid", "validator", {"error": str(plan_error)}
+            )
+        run.plan = completed_steps + remaining
+        run.context["_plan_source"] = source
+        self.repository.save_run(run)
+        self.repository.add_event(
+            run.id,
+            "plan.replanned",
+            "planner",
+            {
+                "attempt": run.context["_replans"],
+                "failed_tool": failed_step.tool,
+                "error": error,
+                "source": source,
+                "remaining_steps": [step.to_dict() for step in remaining],
+            },
+        )
+        return True
+
+    def _verify_and_revise(
+        self, run: Run, step: Any, prior_outputs: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        review = self.critic.evaluate_draft(run)
+        self.repository.add_event(run.id, "critic.checked", "critic", review)
+        if not review["passed"] and int(run.context.get("_revisions", 0)) < 1:
+            run.context["_revisions"] = 1
+            inputs = dict(run.context)
+            inputs.update(step.arguments)
+            inputs["_critic_notes"] = review["notes"]
+            step.output = self.tools.get(step.tool).execute(
+                ToolContext(
+                    run_id=run.id,
+                    step_id=step.id,
+                    objective=run.objective,
+                    instruction=step.instruction,
+                    prior_outputs=prior_outputs[:-1],
+                    inputs=inputs,
+                )
+            )
+            prior_outputs[-1] = step.output
+            self.repository.save_run(run)
+            self.repository.add_event(
+                run.id,
+                "draft.revised",
+                "writer",
+                {"step_id": step.id, "critic_notes": review["notes"]},
+            )
+            review = self.critic.evaluate_draft(run)
+            self.repository.add_event(run.id, "critic.rechecked", "critic", review)
+        if not review["passed"]:
+            self.repository.add_event(run.id, "critic.flagged", "critic", review)
+        run.context["_draft_review"] = review
+        self.repository.save_run(run)
+        return review
 
     def resolve_approval(self, run_id: str, step_id: str, approved: bool) -> Run:
         run = self._require_run(run_id)

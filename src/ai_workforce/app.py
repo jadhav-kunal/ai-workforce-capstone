@@ -41,7 +41,7 @@ def get_orchestrator() -> WorkforceOrchestrator:
 def create_app() -> FastAPI:
     app = FastAPI(
         title="AI Workforce API",
-        version="1.0.0",
+        version="2.0.0",
         description="Safe, observable multi-agent workflow orchestration.",
     )
     static_dir = Path(__file__).parent / "static"
@@ -53,10 +53,10 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "service": "ai-workforce", "version": "1.0.0"}
+        return {"status": "ok", "service": "ai-workforce", "version": "2.0.0"}
 
     @app.get("/api/tools")
-    def tools() -> list[dict[str, str]]:
+    def tools() -> list[dict[str, Any]]:
         return get_orchestrator().tools.catalog()
 
     @app.post("/api/runs", status_code=202)
