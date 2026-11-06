@@ -2,11 +2,13 @@ import ast
 import hashlib
 import json
 import operator
+import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from rank_bm25 import BM25Okapi
@@ -210,14 +212,6 @@ class AppMessageTool(Tool):
         idempotency_key = f"{context.run_id}:{context.step_id}"
         message_id = "msg_" + hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()[:16]
         path = self.outbox_dir / f"{message_id}.json"
-        if path.exists():
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            return {
-                "message": payload,
-                "outbox_path": str(path),
-                "idempotency_key": idempotency_key,
-                "duplicate_suppressed": True,
-            }
         payload = {
             "id": message_id,
             "run_id": context.run_id,
@@ -230,12 +224,22 @@ class AppMessageTool(Tool):
             "delivery": "simulated",
             "idempotency_key": idempotency_key,
         }
-        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        # Publish with os.link so one writer wins and readers never see a partial message.
+        temporary = self.outbox_dir / f".{message_id}.{uuid4().hex}.tmp"
+        temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        duplicate = False
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            duplicate = True
+        finally:
+            temporary.unlink()
         return {
             "message": payload,
             "outbox_path": str(path),
             "idempotency_key": idempotency_key,
-            "duplicate_suppressed": False,
+            "duplicate_suppressed": duplicate,
         }
 
     @staticmethod

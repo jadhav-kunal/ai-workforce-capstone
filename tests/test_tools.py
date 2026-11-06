@@ -1,3 +1,6 @@
+import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -42,3 +45,20 @@ def test_message_tool_suppresses_duplicate_step_delivery(tmp_path: Path) -> None
     assert first["duplicate_suppressed"] is False
     assert second["duplicate_suppressed"] is True
     assert len(list((tmp_path / "outbox").glob("*.json"))) == 1
+
+
+def test_message_tool_keeps_the_first_write_under_concurrency(tmp_path: Path) -> None:
+    outbox = tmp_path / "outbox"
+    tool_context = context("1 + 1")
+    barrier = threading.Barrier(8, timeout=10)
+
+    def send(_: int) -> dict:
+        barrier.wait()
+        return AppMessageTool(str(outbox)).execute(tool_context)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(send, range(8)))
+
+    assert [result["duplicate_suppressed"] for result in results].count(False) == 1
+    assert [path.name for path in outbox.iterdir()] == [f"{results[0]['message']['id']}.json"]
+    assert len({json.dumps(result["message"], sort_keys=True) for result in results}) == 1

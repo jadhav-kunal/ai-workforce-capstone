@@ -6,6 +6,11 @@
   with raw traces for every run and rescoring without model calls.
 - Added the scenario and FinQA pilot datasets and token accounting for OpenAI-compatible providers.
 - Added `ExecutionConfig` so baselines can switch off agentic capabilities.
+- Fixed conflicting approval decisions: an atomic status check now records exactly one decision, so
+  a concurrent rejection can no longer be logged while the message is still sent.
+- Fixed repeated `/start` calls adding events to, or disturbing the state of, a run paused for
+  approval, and a race that could leave an approved run stuck waiting.
+- Made simulated outbox writes atomic so concurrent writers cannot both report a first delivery.
 - Revised drafts are now stored in the trace event.
 
 ## 2.0.0 — 2026-11-06
