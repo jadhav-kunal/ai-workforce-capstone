@@ -12,6 +12,8 @@
   approval, and a race that could leave an approved run stuck waiting.
 - Made simulated outbox writes atomic so concurrent writers cannot both report a first delivery.
 - Revised drafts are now stored in the trace event.
+- Reorganized the dashboard stylesheet into token, base, layout, component, state, and responsive
+  sections with shared `.btn`, `.panel`, and `.control` classes. Rendering is unchanged.
 
 ## 2.0.0 — 2026-11-06
 

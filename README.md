@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
-[![Tests](https://img.shields.io/badge/tests-59%20passing-2E7D32)](#testing-and-verification)
+[![Tests](https://img.shields.io/badge/tests-65%20passing-2E7D32)](#testing-and-verification)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 AI Workforce is an individual CSE 598 capstone project and runnable baseline. It demonstrates that useful agent automation needs more than prompt chaining: it needs explicit delegation, bounded tool access, persistent state, human control, auditability, and a safe improvement loop.
@@ -375,7 +375,7 @@ Current verified result on Python 3.9.6:
 
 ```text
 All checks passed!
-59 passed
+65 passed
 ```
 
 The test suite covers:
@@ -395,7 +395,8 @@ The test suite covers:
 - passage-level grounding and calculation consistency checks;
 - deterministic message idempotency;
 - repeated and concurrent start and approval requests through the REST API;
-- evaluation scoring, safety checks, and reproducibility from raw runs.
+- evaluation scoring, safety checks, and reproducibility from raw runs;
+- dashboard stylesheet structure, tokens, and component classes.
 
 ## Evaluation plan
 

@@ -1,0 +1,11 @@
+{
+ "scenarios": 76,
+ "elements_compared": 9140,
+ "properties_compared": 13134180,
+ "style_differences": 0,
+ "pixel_differences": 0,
+ "element_count_mismatches": 0,
+ "console_errors": [],
+ "details": [],
+ "browser": "156.0.8078.80"
+}
