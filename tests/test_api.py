@@ -55,3 +55,17 @@ def test_dashboard_exposes_evidence_and_calculation_inputs(tmp_path: Path, monke
     assert 'id="expression"' in dashboard.text
     assert 'id="recipient"' in dashboard.text
     get_orchestrator.cache_clear()
+
+
+def test_delegation_form_validation_markup() -> None:
+    static = Path(__file__).resolve().parents[1] / "src" / "ai_workforce" / "static"
+    html = (static / "index.html").read_text()
+    js = (static / "app.js").read_text()
+
+    for field in ("objective", "sources", "expression", "recipient"):
+        assert f'id="{field}-hint"' in html and f'id="{field}-error"' in html
+    assert "novalidate" in html and 'id="form-error"' in html
+    assert "validateSources" in js and "validateExpression" in js and "EMAIL_RE" in js
+    assert "if (submitting) return" in js
+    # Values must never be reset on failure.
+    assert ".reset()" not in js and ".value = ''" not in js

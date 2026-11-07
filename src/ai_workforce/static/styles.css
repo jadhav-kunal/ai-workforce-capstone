@@ -88,3 +88,16 @@ footer { border-top:1px solid var(--line); padding:26px 4vw; display:flex; justi
 #toast { position:fixed; bottom:24px; right:24px; background:var(--ink); color:white; padding:14px 18px; font-size:12px; opacity:0; transform:translateY(10px); pointer-events:none; transition:.2s; }
 #toast.show { opacity:1; transform:none; }
 @media(max-width:800px){ .hero{grid-template-columns:1fr;padding-top:45px}.metrics{display:none}.command-panel{grid-template-columns:1fr;gap:22px;padding:24px}.input-grid,.result-grid{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}.runs-column{border-right:0;padding-right:0}.detail-column{padding-left:0;border-top:1px solid var(--line)}.run-card{grid-template-columns:70px 1fr}.run-card .badge{grid-column:2}.form-row{align-items:flex-start;gap:18px;flex-direction:column}.form-row button{width:100%} }
+
+/* Delegation form: helper text and inline validation */
+.hint { margin:0 0 8px; color:#aeafa6; font:400 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.hint em,.hint code { color:#d8d8d1; font-style:normal; }
+.field { margin-bottom:14px; }
+.input-grid .field label { margin-bottom:4px; }
+.field-error { margin:6px 0 0; color:#ffb3b3; font:500 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.field-error::before { content:"\26A0  "; }
+.field-error[hidden] { display:none; }
+.form-error { margin-top:14px; padding:10px 12px; border:1px solid #ffb3b3; }
+[aria-invalid="true"] { border-color:#ffb3b3 !important; box-shadow:inset 4px 0 0 #ffb3b3; }
+form button:disabled { opacity:.6; cursor:progress; }
+.form-row .hint { margin:6px 0 0; max-width:420px; }
