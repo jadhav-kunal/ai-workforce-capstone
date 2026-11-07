@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from .agents import (
-    MAX_REPLANS_PER_RUN,
-    MAX_STEPS_PER_RUN,
     AgentContext,
     CriticAgent,
     ManagerAgent,
@@ -137,7 +135,7 @@ class WorkforceOrchestrator:
                                 },
                             )
                             return run
-                    if int(run.context.get("_step_attempts", 0)) >= MAX_STEPS_PER_RUN:
+                    if int(run.context.get("_step_attempts", 0)) >= 8:
                         raise RuntimeError("Global eight-step execution budget exhausted")
                     run.context["_step_attempts"] = int(
                         run.context.get("_step_attempts", 0)
@@ -229,7 +227,7 @@ class WorkforceOrchestrator:
     def _create_initial_plan(self, run: Run) -> None:
         agent_context = AgentContext(run=run, memories=self._retrieve_lessons(run))
         run.context["delegation"] = self.manager.delegate(agent_context)
-        run.context["delegation"]["budget"]["max_replans"] = self._max_replans
+        run.context["delegation"]["budget"]["max_replans"] = self.config.max_replans
         if self.config.model_planning:
             source = self._plan_with_model(run, agent_context)
         else:
@@ -295,16 +293,12 @@ class WorkforceOrchestrator:
 
     def _replan(self, run: Run, failed_step: Any, error: str) -> bool:
         replans = int(run.context.get("_replans", 0))
-        observation = {"tool": failed_step.tool, "step_id": failed_step.id, "error": error}
-        run.context.setdefault("_observations", []).append(observation)
-        self.repository.save_run(run)
-        self.repository.add_event(run.id, "step.observed", "manager", observation)
-        if (
-            replans >= self._max_replans
-            or int(run.context.get("_step_attempts", 0)) >= MAX_STEPS_PER_RUN
-        ):
+        if replans >= self.config.max_replans or int(run.context.get("_step_attempts", 0)) >= 8:
             return False
         run.context["_replans"] = replans + 1
+        run.context.setdefault("_observations", []).append(
+            {"tool": failed_step.tool, "step_id": failed_step.id, "error": error}
+        )
         completed_steps = [
             step
             for step in run.plan
@@ -339,10 +333,6 @@ class WorkforceOrchestrator:
             },
         )
         return True
-
-    @property
-    def _max_replans(self) -> int:
-        return min(max(self.config.max_replans, 0), MAX_REPLANS_PER_RUN)
 
     def _verify_and_revise(
         self, run: Run, step: Any, prior_outputs: list[dict[str, Any]]
