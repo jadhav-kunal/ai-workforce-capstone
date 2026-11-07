@@ -4,16 +4,24 @@ from typing import Optional
 from ai_workforce.db import Repository
 from ai_workforce.llm import DemoProvider
 from ai_workforce.models import RunStatus
-from ai_workforce.orchestrator import WorkforceOrchestrator
+from ai_workforce.orchestrator import ExecutionConfig, WorkforceOrchestrator
 from ai_workforce.tools import (
     AppMessageTool,
     KnowledgeSearchTool,
     SafeCalculatorTool,
     SynthesisTool,
     ToolContext,
-    ToolError,
     ToolRegistry,
 )
+
+
+class RecordingDemoProvider(DemoProvider):
+    def __init__(self) -> None:
+        self.plan_requests: list[dict] = []
+
+    def create_plan(self, request: dict) -> dict:
+        self.plan_requests.append(request)
+        return super().create_plan(request)
 
 
 class RepairingProvider(DemoProvider):
@@ -68,7 +76,7 @@ class TransientCalculatorTool(SafeCalculatorTool):
     def execute(self, context: ToolContext) -> dict:
         self.calls += 1
         if self.calls == 1:
-            raise ToolError("temporary calculator outage")
+            raise TimeoutError("temporary calculator outage")
         return super().execute(context)
 
 
@@ -167,7 +175,8 @@ def test_message_cannot_bypass_synthesis_and_grounding(tmp_path: Path) -> None:
 
 def test_recoverable_tool_error_triggers_bounded_replan(tmp_path: Path) -> None:
     calculator = TransientCalculatorTool()
-    orchestrator = build_workforce(tmp_path, DemoProvider(), calculator)
+    provider = RecordingDemoProvider()
+    orchestrator = build_workforce(tmp_path, provider, calculator)
     run = orchestrator.create_run(
         "Calculate the support pilot result",
         {"expression": "1200 * 0.42", "send_message": False},
@@ -177,15 +186,27 @@ def test_recoverable_tool_error_triggers_bounded_replan(tmp_path: Path) -> None:
     assert completed.status == RunStatus.COMPLETED
     assert completed.result["execution"]["replans"] == 1
     assert completed.result["execution"]["step_attempts"] == 4
+    observation = {
+        "tool": "data.calculate",
+        "step_id": next(
+            event["payload"]["step_id"]
+            for event in orchestrator.repository.get_events(run.id)
+            if event["type"] == "step.failed"
+        ),
+        "error": "TimeoutError: temporary calculator outage",
+    }
+    assert completed.context["_observations"] == [observation]
+    assert provider.plan_requests[1]["observations"] == [observation]
+    assert provider.plan_requests[1]["remaining_step_budget"] == 6
     event_types = [event["type"] for event in orchestrator.repository.get_events(run.id)]
     assert "step.failed" in event_types
+    assert "step.observed" in event_types
     assert "plan.replanned" in event_types
 
 
 def test_failed_grounding_uses_two_replans_then_stops(tmp_path: Path) -> None:
-    orchestrator = build_workforce(
-        tmp_path, DemoProvider(), synthesis=UngroundedSynthesisTool()
-    )
+    orchestrator = build_workforce(tmp_path, DemoProvider(), synthesis=UngroundedSynthesisTool())
+    orchestrator.config = ExecutionConfig(max_replans=5)
     run = orchestrator.create_run(
         "Analyze grounded pilot evidence",
         {
@@ -197,9 +218,12 @@ def test_failed_grounding_uses_two_replans_then_stops(tmp_path: Path) -> None:
 
     assert failed.status == RunStatus.FAILED
     assert failed.context["_replans"] == 2
+    assert failed.context["delegation"]["budget"]["max_replans"] == 2
+    assert len(failed.context["_observations"]) == 3
     assert "Grounding review failed" in failed.error
     event_types = [event["type"] for event in orchestrator.repository.get_events(run.id)]
     assert event_types.count("plan.replanned") == 2
+    assert event_types.count("step.observed") == 3
     assert "critic.flagged" in event_types
 
 
