@@ -59,7 +59,7 @@ A run succeeds when it completes the intended workflow, every step and output is
 | Offline deterministic execution | Implemented | Default `demo` provider |
 | OpenAI-compatible model provider | Implemented | Optional environment configuration |
 | Validated model-generated planning | Implemented | Strict tool schemas, one repair, then deterministic fallback |
-| Bounded recovery and replanning | Implemented | Maximum 8 attempted steps and 2 replans per run |
+| Bounded recovery and replanning | Implemented | Failed observations are audited; replans use the remaining 8-attempt budget and are capped at 2 per run |
 | Claim-level grounding review | Implemented | Passage IDs, numeric checks, and one writer revision |
 | Ranked lesson reuse | Implemented | BM25 retrieval of up to 3 scored prior lessons |
 | Idempotent simulated delivery | Implemented | Stable run-and-step key suppresses duplicate outbox writes |
