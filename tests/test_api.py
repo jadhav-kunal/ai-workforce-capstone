@@ -55,3 +55,19 @@ def test_dashboard_exposes_evidence_and_calculation_inputs(tmp_path: Path, monke
     assert 'id="expression"' in dashboard.text
     assert 'id="recipient"' in dashboard.text
     get_orchestrator.cache_clear()
+
+
+def test_dashboard_accessibility_markup() -> None:
+    static = Path(__file__).resolve().parents[1] / "src" / "ai_workforce" / "static"
+    html = (static / "index.html").read_text()
+    css = (static / "styles.css").read_text()
+    js = (static / "app.js").read_text()
+
+    assert 'class="skip-link"' in html and 'id="main"' in html
+    assert 'id="toast"' in html and 'role="status"' in html
+    assert 'id="toast-error"' in html and 'role="alert"' in html
+    assert 'id="sr-status"' in html
+    assert ":focus-visible" in css and "prefers-reduced-motion" in css
+    # Run entries must be real buttons, and status must be rendered as text.
+    assert 'type="button" class="run-card' in js
+    assert "step-status" in js and "label(run.status)" in js
