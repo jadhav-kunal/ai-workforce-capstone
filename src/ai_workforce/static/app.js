@@ -124,9 +124,90 @@ async function resolveApproval(runId, stepId, approved) {
 
 function schedulePoll() { clearTimeout(state.poll); state.poll = setTimeout(() => selectRun(state.selected), 800); }
 
+// ---- Delegation form validation (client-side mirror of the server's rules) ----
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Returns an error message for the first malformed source line, or ''.
+function validateSources(value) {
+  const lines = value.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const sep = line.indexOf('|');
+    if (sep < 0) return `Line ${i + 1} is missing "|". Use: title | passage`;
+    if (!line.slice(0, sep).trim()) return `Line ${i + 1} has no title before "|".`;
+    if (!line.slice(sep + 1).trim()) return `Line ${i + 1} has no passage after "|".`;
+  }
+  return '';
+}
+
+// Recursive-descent check of: numbers, + - * / % **, unary minus, parentheses. No eval.
+function validateExpression(value) {
+  const text = value.trim();
+  if (!text) return '';
+  const tokens = text.match(/\d+\.?\d*|\.\d+|\*\*|[-+*/%()]|\S/g);
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const fail = (m) => { throw new Error(m); };
+  function atom() {
+    const t = peek();
+    if (t === undefined) fail('Expression ends unexpectedly.');
+    if (t === '(') { pos += 1; sum(); if (peek() !== ')') fail('Missing closing parenthesis.'); pos += 1; return; }
+    if (t === '-' || t === '+') { pos += 1; atom(); return; }
+    if (/^(\d|\.\d)/.test(t)) { pos += 1; return; }
+    fail(`Unexpected "${t}". Use numbers, + - * / % ** and parentheses only.`);
+  }
+  function power() { atom(); if (peek() === '**') { pos += 1; power(); } }
+  function product() { power(); while (['*', '/', '%'].includes(peek())) { pos += 1; power(); } }
+  function sum() { product(); while (['+', '-'].includes(peek())) { pos += 1; product(); } }
+  try { sum(); if (pos < tokens.length) fail(`Unexpected "${peek()}".`); } catch (error) { return error.message; }
+  return '';
+}
+
+const FIELD_RULES = {
+  objective: (v) => (v.trim().length < 3 ? 'Describe the outcome in at least 3 characters.' : ''),
+  sources: validateSources,
+  expression: validateExpression,
+  recipient: (v) => (v.trim() && !EMAIL_RE.test(v.trim()) ? 'Enter a valid email address, e.g. name@example.com.' : ''),
+};
+
+function setFieldError(name, message) {
+  const input = $(`#${name}`); const node = $(`#${name}-error`);
+  node.textContent = message; node.hidden = !message;
+  if (message) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+  return !message;
+}
+
+function validateField(name) { return setFieldError(name, FIELD_RULES[name]($(`#${name}`).value)); }
+
+// Validates every field, focuses the first invalid one, and reports whether the form is valid.
+function validateForm() {
+  const invalid = Object.keys(FIELD_RULES).filter((name) => !validateField(name));
+  if (invalid.length) {
+    $('#sources').closest('details').open = true;
+    $(`#${invalid[0]}`).focus();
+    announce(`${invalid.length} field${invalid.length > 1 ? 's need' : ' needs'} attention.`);
+  }
+  return !invalid.length;
+}
+
+Object.keys(FIELD_RULES).forEach((name) => {
+  const input = $(`#${name}`);
+  input.addEventListener('blur', () => validateField(name));
+  // Clear a shown error as soon as the user fixes it.
+  input.addEventListener('input', () => { if (input.getAttribute('aria-invalid') === 'true') validateField(name); });
+});
+
+let submitting = false;
 $('#run-form').addEventListener('submit', async event => {
   event.preventDefault();
-  const button = event.currentTarget.querySelector('button[type="submit"]'); button.disabled = true; button.setAttribute('aria-busy', 'true');
+  if (submitting) return;
+  const formError = $('#form-error'); formError.hidden = true; formError.textContent = '';
+  if (!validateForm()) return;
+  submitting = true;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true; button.setAttribute('aria-busy', 'true');
+  button.firstElementChild.textContent = 'Deploying…';
   announce('Deploying workforce…');
   try {
     const expression = $('#expression').value.trim();
@@ -139,7 +220,15 @@ $('#run-form').addEventListener('submit', async event => {
     if (expression) context.expression = expression;
     const run = await api('/api/runs', { method:'POST', body:JSON.stringify({ objective:$('#objective').value, context }) });
     toast('Workforce deployed'); await loadMetrics(); await selectRun(run.id, { focus: true });
-  } catch (error) { toast(error.message, true); } finally { button.disabled = false; button.removeAttribute('aria-busy'); }
+  } catch (error) {
+    // Entered values are left untouched so the user can correct and retry.
+    formError.textContent = `Could not deploy: ${error.message}. Your entries were kept; try again.`;
+    formError.hidden = false;
+    toast(error.message, true);
+  } finally {
+    submitting = false; button.disabled = false; button.removeAttribute('aria-busy');
+    button.firstElementChild.textContent = 'Deploy workforce';
+  }
 });
 $('#refresh').addEventListener('click', () => {
   announce('Refreshing run log…');

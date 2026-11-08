@@ -71,3 +71,17 @@ def test_dashboard_accessibility_markup() -> None:
     # Run entries must be real buttons, and status must be rendered as text.
     assert 'class="btn run-card' in js
     assert "step-status" in js and "label(run.status)" in js
+
+
+def test_delegation_form_validation_markup() -> None:
+    static = Path(__file__).resolve().parents[1] / "src" / "ai_workforce" / "static"
+    html = (static / "index.html").read_text()
+    js = (static / "app.js").read_text()
+
+    for field in ("objective", "sources", "expression", "recipient"):
+        assert f'id="{field}-hint"' in html and f'id="{field}-error"' in html
+    assert "novalidate" in html and 'id="form-error"' in html
+    assert "validateSources" in js and "validateExpression" in js and "EMAIL_RE" in js
+    assert "if (submitting) return" in js
+    # Values must never be reset on failure.
+    assert ".reset()" not in js and ".value = ''" not in js
