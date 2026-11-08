@@ -65,6 +65,13 @@ Pilot constraint | Any customer-facing output must be reviewed by a support lead
             </div>
           </div>
         </details>
+
+        <div class="form-row">
+          <div class="field message-field">
+            <label class="switch"><input id="send-message" type="checkbox" checked><span></span> Include stakeholder update</label>
+            <p class="help" id="message-help">When enabled, a high-risk simulated message is drafted after research and calculation. Approval is required before delivery.</p>
+          </div>
+          <button type="submit" id="submit-run"><span>Deploy workforce</span><b>→</b></button>
         <p class="field-error form-error" id="form-error" role="alert" hidden></p>
         <div class="form-row">
           <div>
@@ -73,6 +80,7 @@ Pilot constraint | Any customer-facing output must be reviewed by a support lead
           </div>
           <button class="btn btn-primary" type="submit"><span>Deploy workforce</span><b aria-hidden="true">→</b></button>
         </div>
+        <p class="form-status" id="form-status" role="status" aria-live="polite" hidden></p>
       </form>
     </section>
 
