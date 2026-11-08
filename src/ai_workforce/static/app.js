@@ -1,4 +1,4 @@
-const state = { selected: new URLSearchParams(window.location.search).get('run'), poll: null };
+const state = { selected: new URLSearchParams(window.location.search).get('run'), poll: null, lastStatus: {} };
 const $ = (selector) => document.querySelector(selector);
 
 async function api(path, options = {}) {
@@ -7,10 +7,25 @@ async function api(path, options = {}) {
   return response.json();
 }
 
-function toast(message) {
-  const node = $('#toast'); node.textContent = message; node.classList.add('show');
-  window.setTimeout(() => node.classList.remove('show'), 2600);
+// Visible toast + live region. Errors use role="alert" (assertive); everything else is a polite status.
+let toastTimer = null;
+function toast(message, isError = false) {
+  const node = $(isError ? '#toast-error' : '#toast');
+  $(isError ? '#toast' : '#toast-error').classList.remove('show');
+  node.textContent = '';
+  // Re-set text on the next tick so repeated identical messages are announced again.
+  window.setTimeout(() => { node.textContent = message; node.classList.add('show'); }, 30);
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => node.classList.remove('show'), isError ? 6000 : 4000);
 }
+
+// Screen-reader-only announcements (loading, run status changes) that need no visual toast.
+function announce(message) {
+  const node = $('#sr-status'); node.textContent = '';
+  window.setTimeout(() => { node.textContent = message; }, 30);
+}
+
+const label = (value) => String(value ?? '').replace(/_/g, ' ');
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -32,24 +47,39 @@ async function loadMetrics() {
 }
 
 async function loadRuns() {
-  const runs = await api('/api/runs');
   const container = $('#runs');
-  if (!runs.length) { container.innerHTML = '<p class="empty">No runs yet. Delegate an outcome above.</p>'; return; }
-  container.innerHTML = runs.map(run => `
-    <article class="run-card ${run.id === state.selected ? 'active' : ''}" data-id="${esc(run.id)}">
-      <time>${new Date(run.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</time>
-      <strong>${esc(run.objective)}</strong>
-      <span class="badge ${esc(run.status)}">${esc(run.status.replace('_',' '))}</span>
-    </article>`).join('');
-  container.querySelectorAll('.run-card').forEach(card => card.addEventListener('click', () => selectRun(card.dataset.id)));
+  container.setAttribute('aria-busy', 'true');
+  try {
+    const runs = await api('/api/runs');
+    if (!runs.length) { container.innerHTML = '<p class="empty">No runs yet. Delegate an outcome above.</p>'; return; }
+    // Keep keyboard focus on the same run if the list is re-rendered (refresh, polling).
+    const focusedId = document.activeElement?.closest?.('.run-card')?.dataset.id;
+    container.innerHTML = `<ul class="run-items">${runs.map(run => `
+      <li><button type="button" class="btn run-card ${run.id === state.selected ? 'active' : ''}" data-id="${esc(run.id)}" ${run.id === state.selected ? 'aria-current="true"' : ''}>
+        <time datetime="${esc(run.created_at)}">${new Date(run.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</time>
+        <strong><span class="sr-only">Run: </span>${esc(run.objective)}</strong>
+        <span class="badge ${esc(run.status)}"><span class="sr-only">Status: </span>${esc(label(run.status))}</span>
+      </button></li>`).join('')}</ul>`;
+    container.querySelectorAll('.run-card').forEach(card => card.addEventListener('click', () => selectRun(card.dataset.id, { focus: true })));
+    if (focusedId) container.querySelector(`.run-card[data-id="${CSS.escape(focusedId)}"]`)?.focus();
+  } finally { container.setAttribute('aria-busy', 'false'); }
 }
 
-async function selectRun(id) {
+async function selectRun(id, { focus = false } = {}) {
   state.selected = id;
   window.history.replaceState(null, '', `?run=${encodeURIComponent(id)}`);
+  const detail = $('#detail');
+  detail.setAttribute('aria-busy', 'true');
+  if (focus) announce('Loading run details…');
   await loadRuns();
   const run = await api(`/api/runs/${id}`);
   renderDetail(run);
+  detail.setAttribute('aria-busy', 'false');
+  if (focus) $('#detail-title')?.focus();
+  if (state.lastStatus[id] !== run.status) {
+    if (state.lastStatus[id] !== undefined || focus) announce(`Run status: ${label(run.status)}${run.status === 'waiting_approval' ? '. Human approval is required.' : ''}`);
+    state.lastStatus[id] = run.status;
+  }
   const transient = ['queued','running'].includes(run.status);
   if (transient) schedulePoll(); else clearTimeout(state.poll);
 }
@@ -57,11 +87,11 @@ async function selectRun(id) {
 function renderDetail(run) {
   const waiting = run.plan.find(step => step.status === 'waiting_approval');
   const plan = run.plan.map((step, index) => `
-    <div class="step ${esc(step.status)}">
-      <span class="step-dot">${step.status === 'completed' ? '✓' : index + 1}</span>
-      <div><h4>${esc(step.title)}</h4><p>${esc(step.agent)} · ${esc(step.tool)} · ${esc(step.risk)} risk${Object.keys(step.arguments || {}).length ? ` · ${esc(JSON.stringify(step.arguments))}` : ''}</p></div>
+    <div class="step ${esc(step.status)}" role="listitem">
+      <span class="step-dot" aria-hidden="true">${step.status === 'completed' ? '✓' : step.status === 'waiting_approval' ? '!' : index + 1}</span>
+      <div><h4>${esc(step.title)} <span class="step-status">${esc(label(step.status))}</span></h4><p>${esc(step.agent)} · ${esc(step.tool)} · ${esc(step.risk)} risk${Object.keys(step.arguments || {}).length ? ` · ${esc(JSON.stringify(step.arguments))}` : ''}</p></div>
     </div>`).join('');
-  const approval = waiting ? `<div class="panel approval"><p><strong>Human decision required.</strong><br>This step creates an external-facing artifact in the simulated outbox.</p><button class="btn btn-solid" data-approve="true">Approve & continue</button><button class="btn btn-danger" data-approve="false">Reject</button></div>` : '';
+  const approval = waiting ? `<div class="panel approval" role="group" aria-labelledby="approval-title"><p><strong id="approval-title">Human decision required.</strong><br>This step creates an external-facing artifact in the simulated outbox.</p><button class="btn btn-solid" type="button" data-approve="true">Approve &amp; continue</button><button class="btn btn-danger" type="button" data-approve="false">Reject</button></div>` : '';
   const calculation = run.result?.artifacts?.find(item => Object.hasOwn(item, 'value'));
   const research = run.result?.artifacts?.find(item => item.findings);
   const message = run.result?.artifacts?.find(item => item.message);
@@ -78,25 +108,107 @@ function renderDetail(run) {
     <p>${esc(run.result.review.reflection)}</p>
     <details><summary>Exact artifact JSON</summary><pre>${esc(JSON.stringify(run.result.artifacts, null, 2))}</pre></details>
   </div>` : (run.error ? `<div class="panel result"><h4>Run error</h4><p>${esc(run.error)}</p></div>` : '');
-  const events = run.events?.length ? `<details class="panel events"><summary>Audit event history · ${run.events.length} events</summary><ol>${run.events.map(event => `<li><time>${esc(new Date(event.created_at).toLocaleTimeString())}</time><b>${esc(event.type)}</b><span>${esc(event.actor)}</span></li>`).join('')}</ol></details>` : '';
+  const events = run.events?.length ? `<details class="panel events"><summary>Audit event history · ${run.events.length} events</summary><ol>${run.events.map(event => `<li><time datetime="${esc(event.created_at)}">${esc(new Date(event.created_at).toLocaleTimeString())}</time><b>${esc(event.type)}</b><span>${esc(event.actor)}</span></li>`).join('')}</ol></details>` : '';
   $('#detail').innerHTML = `
-    <div class="detail-top"><div><span class="run-id">${esc(run.id)}</span><h3>${esc(run.objective)}</h3></div><span class="badge ${esc(run.status)}">${esc(run.status.replace('_',' '))}</span></div>
-    <div class="timeline">${plan || '<p class="empty">Planning…</p>'}</div>${approval}${result}${events}`;
+    <div class="detail-top"><div><span class="run-id">${esc(run.id)}</span><h3 id="detail-title" tabindex="-1">${esc(run.objective)}</h3></div><span class="badge ${esc(run.status)}"><span class="sr-only">Status: </span>${esc(label(run.status))}</span></div>
+    <div class="timeline" role="list" aria-label="Plan steps">${plan || '<p class="empty">Planning…</p>'}</div>${approval}${result}${events}`;
   document.querySelectorAll('[data-approve]').forEach(button => button.addEventListener('click', () => resolveApproval(run.id, waiting.id, button.dataset.approve === 'true')));
 }
 
 async function resolveApproval(runId, stepId, approved) {
   try {
     await api(`/api/runs/${runId}/approval`, { method:'POST', body:JSON.stringify({ step_id:stepId, approved }) });
-    await Promise.all([loadRuns(), loadMetrics()]); await selectRun(runId); toast(approved ? 'Action approved and completed' : 'Action rejected');
-  } catch (error) { toast(error.message); }
+    await Promise.all([loadRuns(), loadMetrics()]); await selectRun(runId, { focus: true }); toast(approved ? 'Action approved and completed' : 'Action rejected');
+  } catch (error) { toast(error.message, true); }
 }
 
 function schedulePoll() { clearTimeout(state.poll); state.poll = setTimeout(() => selectRun(state.selected), 800); }
 
+// ---- Delegation form validation (client-side mirror of the server's rules) ----
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Returns an error message for the first malformed source line, or ''.
+function validateSources(value) {
+  const lines = value.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const sep = line.indexOf('|');
+    if (sep < 0) return `Line ${i + 1} is missing "|". Use: title | passage`;
+    if (!line.slice(0, sep).trim()) return `Line ${i + 1} has no title before "|".`;
+    if (!line.slice(sep + 1).trim()) return `Line ${i + 1} has no passage after "|".`;
+  }
+  return '';
+}
+
+// Recursive-descent check of: numbers, + - * / % **, unary minus, parentheses. No eval.
+function validateExpression(value) {
+  const text = value.trim();
+  if (!text) return '';
+  const tokens = text.match(/\d+\.?\d*|\.\d+|\*\*|[-+*/%()]|\S/g);
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const fail = (m) => { throw new Error(m); };
+  function atom() {
+    const t = peek();
+    if (t === undefined) fail('Expression ends unexpectedly.');
+    if (t === '(') { pos += 1; sum(); if (peek() !== ')') fail('Missing closing parenthesis.'); pos += 1; return; }
+    if (t === '-' || t === '+') { pos += 1; atom(); return; }
+    if (/^(\d|\.\d)/.test(t)) { pos += 1; return; }
+    fail(`Unexpected "${t}". Use numbers, + - * / % ** and parentheses only.`);
+  }
+  function power() { atom(); if (peek() === '**') { pos += 1; power(); } }
+  function product() { power(); while (['*', '/', '%'].includes(peek())) { pos += 1; power(); } }
+  function sum() { product(); while (['+', '-'].includes(peek())) { pos += 1; product(); } }
+  try { sum(); if (pos < tokens.length) fail(`Unexpected "${peek()}".`); } catch (error) { return error.message; }
+  return '';
+}
+
+const FIELD_RULES = {
+  objective: (v) => (v.trim().length < 3 ? 'Describe the outcome in at least 3 characters.' : ''),
+  sources: validateSources,
+  expression: validateExpression,
+  recipient: (v) => (v.trim() && !EMAIL_RE.test(v.trim()) ? 'Enter a valid email address, e.g. name@example.com.' : ''),
+};
+
+function setFieldError(name, message) {
+  const input = $(`#${name}`); const node = $(`#${name}-error`);
+  node.textContent = message; node.hidden = !message;
+  if (message) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+  return !message;
+}
+
+function validateField(name) { return setFieldError(name, FIELD_RULES[name]($(`#${name}`).value)); }
+
+// Validates every field, focuses the first invalid one, and reports whether the form is valid.
+function validateForm() {
+  const invalid = Object.keys(FIELD_RULES).filter((name) => !validateField(name));
+  if (invalid.length) {
+    $('#sources').closest('details').open = true;
+    $(`#${invalid[0]}`).focus();
+    announce(`${invalid.length} field${invalid.length > 1 ? 's need' : ' needs'} attention.`);
+  }
+  return !invalid.length;
+}
+
+Object.keys(FIELD_RULES).forEach((name) => {
+  const input = $(`#${name}`);
+  input.addEventListener('blur', () => validateField(name));
+  // Clear a shown error as soon as the user fixes it.
+  input.addEventListener('input', () => { if (input.getAttribute('aria-invalid') === 'true') validateField(name); });
+});
+
+let submitting = false;
 $('#run-form').addEventListener('submit', async event => {
   event.preventDefault();
-  const button = event.currentTarget.querySelector('button'); button.disabled = true;
+  if (submitting) return;
+  const formError = $('#form-error'); formError.hidden = true; formError.textContent = '';
+  if (!validateForm()) return;
+  submitting = true;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true; button.setAttribute('aria-busy', 'true');
+  button.firstElementChild.textContent = 'Deploying…';
+  announce('Deploying workforce…');
   try {
     const expression = $('#expression').value.trim();
     const context = {
@@ -107,10 +219,21 @@ $('#run-form').addEventListener('submit', async event => {
     };
     if (expression) context.expression = expression;
     const run = await api('/api/runs', { method:'POST', body:JSON.stringify({ objective:$('#objective').value, context }) });
-    toast('Workforce deployed'); await loadMetrics(); await selectRun(run.id);
-  } catch (error) { toast(error.message); } finally { button.disabled = false; }
+    toast('Workforce deployed'); await loadMetrics(); await selectRun(run.id, { focus: true });
+  } catch (error) {
+    // Entered values are left untouched so the user can correct and retry.
+    formError.textContent = `Could not deploy: ${error.message}. Your entries were kept; try again.`;
+    formError.hidden = false;
+    toast(error.message, true);
+  } finally {
+    submitting = false; button.disabled = false; button.removeAttribute('aria-busy');
+    button.firstElementChild.textContent = 'Deploy workforce';
+  }
 });
-$('#refresh').addEventListener('click', () => Promise.all([loadRuns(), loadMetrics()]));
+$('#refresh').addEventListener('click', () => {
+  announce('Refreshing run log…');
+  Promise.all([loadRuns(), loadMetrics()]).then(() => announce('Run log refreshed')).catch(error => toast(error.message, true));
+});
 Promise.all([loadRuns(), loadMetrics()])
   .then(() => state.selected && selectRun(state.selected))
-  .catch(error => toast(error.message));
+  .catch(error => toast(error.message, true));

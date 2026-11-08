@@ -8,69 +8,85 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div class="noise"></div>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <div class="noise" aria-hidden="true"></div>
   <header>
     <a class="brand" href="/" aria-label="AI Workforce home">
-      <span class="brand-mark">AW</span>
+      <span class="brand-mark" aria-hidden="true">AW</span>
       <span>AI Workforce</span>
     </a>
-    <div class="system-state"><i></i> SYSTEM ONLINE</div>
+    <div class="system-state"><i aria-hidden="true"></i> SYSTEM ONLINE</div>
   </header>
 
-  <main>
+  <main id="main" tabindex="-1">
     <section class="hero">
       <div>
         <p class="eyebrow">AUTONOMOUS OPERATIONS / CONTROL PLANE</p>
         <h1>Delegate outcomes.<br><em>Keep control.</em></h1>
         <p class="lede">A 24/7 team of specialized agents that researches, plans, executes, and learns—with a human checkpoint where it matters.</p>
       </div>
-      <div class="metrics" id="metrics" aria-label="Workforce metrics">
+      <div class="metrics" id="metrics" role="group" aria-label="Workforce metrics">
         <div><span id="metric-runs">0</span><small>TOTAL RUNS</small></div>
         <div><span id="metric-success">0%</span><small>SUCCESS RATE</small></div>
         <div><span id="metric-lessons">0</span><small>LESSONS</small></div>
       </div>
     </section>
 
-    <section class="panel command-panel">
-      <div class="panel-label"><span>01</span> NEW DELEGATION</div>
-      <form id="run-form">
+    <section class="panel command-panel" aria-labelledby="delegation-label">
+      <div class="panel-label" id="delegation-label"><span aria-hidden="true">01</span> NEW DELEGATION</div>
+      <form id="run-form" novalidate>
         <label for="objective">What outcome should the workforce deliver?</label>
-        <textarea id="objective" class="control" required minlength="3" placeholder="Research three launch risks, prepare an action brief, and send the recommendation to the project sponsor.">Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.</textarea>
+        <p class="hint" id="objective-hint">Describe the result you want in a sentence. Example: <em>Evaluate the pilot, calculate impact, and notify the sponsor.</em></p>
+        <textarea id="objective" class="control" required minlength="3" aria-describedby="objective-hint objective-error" placeholder="Research three launch risks, prepare an action brief, and send the recommendation to the project sponsor.">Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.</textarea>
+        <p class="field-error" id="objective-error" role="alert" hidden></p>
         <details class="demo-inputs" open>
           <summary>Evidence and calculation inputs</summary>
           <div class="input-grid">
-            <label for="sources">Source passages <small>One per line: title | passage</small>
-              <textarea id="sources" class="control control-compact" placeholder="Support baseline | The team receives 1,200 tickets per month.">Support baseline | The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.
+            <div class="field">
+              <label for="sources">Source passages</label>
+              <p class="hint" id="sources-hint">One per line, formatted as <code>title | passage</code>. Optional.</p>
+              <textarea id="sources" class="control control-compact" aria-describedby="sources-hint sources-error" placeholder="Support baseline | The team receives 1,200 tickets per month.">Support baseline | The team receives 1,200 tickets per month; 42% are repetitive tier-one requests.
 Pilot constraint | Any customer-facing output must be reviewed by a support lead.</textarea>
-            </label>
+              <p class="field-error" id="sources-error" role="alert" hidden></p>
+            </div>
             <div>
-              <label for="expression">Calculation <small>Basic arithmetic only</small>
-                <input id="expression" class="control control-compact" value="1200 * 0.42" placeholder="1200 * 0.42">
-              </label>
-              <label for="recipient">Simulated recipient
-                <input id="recipient" class="control control-compact" type="email" value="project-sponsor@example.com" placeholder="project-sponsor@example.com">
-              </label>
+              <div class="field">
+                <label for="expression">Calculation</label>
+                <p class="hint" id="expression-hint">Basic arithmetic only: <code>+ - * / % **</code> and parentheses. Example: <code>1200 * 0.42</code>. Optional.</p>
+                <input id="expression" class="control control-compact" value="1200 * 0.42" placeholder="1200 * 0.42" autocomplete="off" aria-describedby="expression-hint expression-error">
+                <p class="field-error" id="expression-error" role="alert" hidden></p>
+              </div>
+              <div class="field">
+                <label for="recipient">Simulated recipient</label>
+                <p class="hint" id="recipient-hint">Email address for the stakeholder update. Nothing is really sent.</p>
+                <input id="recipient" class="control control-compact" type="email" value="project-sponsor@example.com" placeholder="project-sponsor@example.com" autocomplete="off" aria-describedby="recipient-hint recipient-error">
+                <p class="field-error" id="recipient-error" role="alert" hidden></p>
+              </div>
             </div>
           </div>
         </details>
+        <p class="field-error form-error" id="form-error" role="alert" hidden></p>
         <div class="form-row">
-          <label class="switch"><input id="send-message" type="checkbox" checked><span></span> Include stakeholder update</label>
-          <button class="btn btn-primary" type="submit"><span>Deploy workforce</span><b>→</b></button>
+          <div>
+            <label class="switch"><input id="send-message" type="checkbox" checked aria-describedby="send-hint"><span></span> Include stakeholder update</label>
+            <p class="hint" id="send-hint">On: a person must approve the outbound message before it is simulated-sent.</p>
+          </div>
+          <button class="btn btn-primary" type="submit"><span>Deploy workforce</span><b aria-hidden="true">→</b></button>
         </div>
       </form>
     </section>
 
-    <section class="workspace">
+    <section class="workspace" aria-label="Runs and run details">
       <div class="runs-column">
         <div class="section-head">
-          <h2>Run log</h2>
-          <button class="btn btn-quiet" id="refresh">Refresh</button>
+          <h2 id="runs-heading">Run log</h2>
+          <button class="btn btn-quiet" type="button" id="refresh" aria-label="Refresh run log">Refresh</button>
         </div>
-        <div id="runs" class="run-list"><p class="empty">No runs yet. Delegate an outcome above.</p></div>
+        <div id="runs" class="run-list" aria-labelledby="runs-heading" aria-busy="false"><p class="empty">No runs yet. Delegate an outcome above.</p></div>
       </div>
-      <aside class="detail-column" id="detail">
+      <aside class="detail-column" id="detail" aria-label="Run details">
         <div class="empty-detail">
-          <span>⌁</span>
+          <span aria-hidden="true">⌁</span>
           <h3>Select a run</h3>
           <p>Inspect the plan, agent trace, tool outputs, and approval decisions.</p>
         </div>
@@ -79,7 +95,10 @@ Pilot constraint | Any customer-facing output must be reviewed by a support lead
   </main>
 
   <footer><span>CAPSTONE / v2.0.0</span><span>LOCAL-FIRST · AUDITABLE · HUMAN-GOVERNED</span></footer>
-  <div id="toast" role="status" aria-live="polite"></div>
+  <!-- Live regions: polite status for confirmations, assertive alert for errors, hidden status for loading/progress. -->
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast-error" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="sr-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>
