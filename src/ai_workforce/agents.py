@@ -9,6 +9,9 @@ from .llm import LLMError, LLMProvider, extract_terms
 from .models import PlanStep, Run
 from .tools import ToolError, ToolRegistry
 
+MAX_STEPS_PER_RUN = 8
+MAX_REPLANS_PER_RUN = 2
+
 
 class PlanValidationError(ValueError):
     pass
@@ -45,7 +48,11 @@ class ManagerAgent:
             "strategy": "plan -> execute -> observe -> verify -> approve -> learn",
             "prior_lessons": [memory["lesson"] for memory in context.memories[:3]],
             "memory_sources": [memory["source_run_id"] for memory in context.memories[:3]],
-            "budget": {"max_steps": 8, "max_replans": 2, "max_repairs": 1},
+            "budget": {
+                "max_steps": MAX_STEPS_PER_RUN,
+                "max_replans": MAX_REPLANS_PER_RUN,
+                "max_repairs": 1,
+            },
         }
 
 
@@ -63,6 +70,10 @@ class PlannerAgent:
         completed_tools: Optional[list[str]] = None,
     ) -> list[PlanStep]:
         completed_tools = completed_tools or []
+        remaining_step_budget = min(
+            MAX_STEPS_PER_RUN - len(completed_tools),
+            MAX_STEPS_PER_RUN - int(context.run.context.get("_step_attempts", 0)),
+        )
         public_context = {
             key: value for key, value in context.run.context.items() if not key.startswith("_")
         }
@@ -73,7 +84,7 @@ class PlannerAgent:
             "lessons": [memory["lesson"] for memory in context.memories[:3]],
             "observations": context.run.context.get("_observations", []),
             "completed_tools": completed_tools,
-            "remaining_step_budget": 8 - len(completed_tools),
+            "remaining_step_budget": max(0, remaining_step_budget),
         }
         if validation_error:
             request["validation_error"] = validation_error
@@ -83,12 +94,15 @@ class PlannerAgent:
             proposal = ProposedPlan.model_validate(raw_plan)
         except (LLMError, ValidationError, TypeError, ValueError) as exc:
             raise PlanValidationError(str(exc)) from exc
-        return self._validate_steps(context.run, proposal.steps, completed_tools)
+        return self._validate_steps(
+            context.run, proposal.steps, completed_tools, remaining_step_budget
+        )
 
     def fallback_plan(
         self, context: AgentContext, completed_tools: Optional[list[str]] = None
     ) -> list[PlanStep]:
-        completed = set(completed_tools or [])
+        completed_tools = completed_tools or []
+        completed = set(completed_tools)
         run = context.run
         proposals: list[ProposedStep] = []
         if "knowledge.search" not in completed:
@@ -138,12 +152,26 @@ class PlannerAgent:
             )
         if not proposals:
             raise PlanValidationError("Fallback planner produced no remaining steps")
-        return self._validate_steps(run, proposals, list(completed))
+        remaining_step_budget = min(
+            MAX_STEPS_PER_RUN - len(completed_tools),
+            MAX_STEPS_PER_RUN - int(run.context.get("_step_attempts", 0)),
+        )
+        return self._validate_steps(
+            run, proposals, completed_tools, remaining_step_budget
+        )
 
     def _validate_steps(
-        self, run: Run, proposals: list[ProposedStep], completed_tools: list[str]
+        self,
+        run: Run,
+        proposals: list[ProposedStep],
+        completed_tools: list[str],
+        remaining_step_budget: int,
     ) -> list[PlanStep]:
-        if len(completed_tools) + len(proposals) > 8:
+        if (
+            remaining_step_budget < 0
+            or len(proposals) > remaining_step_budget
+            or len(completed_tools) + len(proposals) > MAX_STEPS_PER_RUN
+        ):
             raise PlanValidationError("Plan exceeds the eight-step run budget")
         result: list[PlanStep] = []
         available_outputs = set(completed_tools)

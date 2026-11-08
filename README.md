@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
-[![Tests](https://img.shields.io/badge/tests-59%20passing-2E7D32)](#testing-and-verification)
+[![Tests](https://img.shields.io/badge/tests-65%20passing-2E7D32)](#testing-and-verification)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 AI Workforce is an individual CSE 598 capstone project and runnable baseline. It demonstrates that useful agent automation needs more than prompt chaining: it needs explicit delegation, bounded tool access, persistent state, human control, auditability, and a safe improvement loop.
@@ -59,7 +59,7 @@ A run succeeds when it completes the intended workflow, every step and output is
 | Offline deterministic execution | Implemented | Default `demo` provider |
 | OpenAI-compatible model provider | Implemented | Optional environment configuration |
 | Validated model-generated planning | Implemented | Strict tool schemas, one repair, then deterministic fallback |
-| Bounded recovery and replanning | Implemented | Maximum 8 attempted steps and 2 replans per run |
+| Bounded recovery and replanning | Implemented | Failed observations are audited; replans use the remaining 8-attempt budget and are capped at 2 per run |
 | Claim-level grounding review | Implemented | Passage IDs, numeric checks, and one writer revision |
 | Ranked lesson reuse | Implemented | BM25 retrieval of up to 3 scored prior lessons |
 | Idempotent simulated delivery | Implemented | Stable run-and-step key suppresses duplicate outbox writes |
@@ -228,6 +228,8 @@ The full JSON is printed to the terminal and persisted in `data/workforce.db`. G
 6. If the run reaches `waiting approval`, approve or reject the exact high-risk step.
 7. Review the final artifacts, quality checks, and updated lesson metric.
 
+The dashboard is keyboard operable and screen-reader friendly; see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) for the checklist and how to verify it with browser tooling.
+
 Approved messages are written as JSON files under `data/outbox/`. Delivery is explicitly labeled `simulated`; the project never sends real email.
 
 ## Five-line SDK example
@@ -375,7 +377,7 @@ Current verified result on Python 3.9.6:
 
 ```text
 All checks passed!
-59 passed
+65 passed
 ```
 
 The test suite covers:
@@ -395,7 +397,8 @@ The test suite covers:
 - passage-level grounding and calculation consistency checks;
 - deterministic message idempotency;
 - repeated and concurrent start and approval requests through the REST API;
-- evaluation scoring, safety checks, and reproducibility from raw runs.
+- evaluation scoring, safety checks, and reproducibility from raw runs;
+- dashboard stylesheet structure, tokens, and component classes.
 
 ## Evaluation plan
 
