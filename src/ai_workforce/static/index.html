@@ -8,31 +8,32 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div class="noise"></div>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <div class="noise" aria-hidden="true"></div>
   <header>
     <a class="brand" href="/" aria-label="AI Workforce home">
-      <span class="brand-mark">AW</span>
+      <span class="brand-mark" aria-hidden="true">AW</span>
       <span>AI Workforce</span>
     </a>
-    <div class="system-state"><i></i> SYSTEM ONLINE</div>
+    <div class="system-state"><i aria-hidden="true"></i> SYSTEM ONLINE</div>
   </header>
 
-  <main>
+  <main id="main" tabindex="-1">
     <section class="hero">
       <div>
         <p class="eyebrow">AUTONOMOUS OPERATIONS / CONTROL PLANE</p>
         <h1>Delegate outcomes.<br><em>Keep control.</em></h1>
         <p class="lede">A 24/7 team of specialized agents that researches, plans, executes, and learns—with a human checkpoint where it matters.</p>
       </div>
-      <div class="metrics" id="metrics" aria-label="Workforce metrics">
+      <div class="metrics" id="metrics" role="group" aria-label="Workforce metrics">
         <div><span id="metric-runs">0</span><small>TOTAL RUNS</small></div>
         <div><span id="metric-success">0%</span><small>SUCCESS RATE</small></div>
         <div><span id="metric-lessons">0</span><small>LESSONS</small></div>
       </div>
     </section>
 
-    <section class="panel command-panel">
-      <div class="panel-label"><span>01</span> NEW DELEGATION</div>
+    <section class="panel command-panel" aria-labelledby="delegation-label">
+      <div class="panel-label" id="delegation-label"><span aria-hidden="true">01</span> NEW DELEGATION</div>
       <form id="run-form">
         <label for="objective">What outcome should the workforce deliver?</label>
         <textarea id="objective" class="control" required minlength="3" placeholder="Research three launch risks, prepare an action brief, and send the recommendation to the project sponsor.">Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.</textarea>
@@ -55,22 +56,22 @@ Pilot constraint | Any customer-facing output must be reviewed by a support lead
         </details>
         <div class="form-row">
           <label class="switch"><input id="send-message" type="checkbox" checked><span></span> Include stakeholder update</label>
-          <button class="btn btn-primary" type="submit"><span>Deploy workforce</span><b>→</b></button>
+          <button class="btn btn-primary" type="submit"><span>Deploy workforce</span><b aria-hidden="true">→</b></button>
         </div>
       </form>
     </section>
 
-    <section class="workspace">
+    <section class="workspace" aria-label="Runs and run details">
       <div class="runs-column">
         <div class="section-head">
-          <h2>Run log</h2>
-          <button class="btn btn-quiet" id="refresh">Refresh</button>
+          <h2 id="runs-heading">Run log</h2>
+          <button class="btn btn-quiet" type="button" id="refresh" aria-label="Refresh run log">Refresh</button>
         </div>
-        <div id="runs" class="run-list"><p class="empty">No runs yet. Delegate an outcome above.</p></div>
+        <div id="runs" class="run-list" aria-labelledby="runs-heading" aria-busy="false"><p class="empty">No runs yet. Delegate an outcome above.</p></div>
       </div>
-      <aside class="detail-column" id="detail">
+      <aside class="detail-column" id="detail" aria-label="Run details">
         <div class="empty-detail">
-          <span>⌁</span>
+          <span aria-hidden="true">⌁</span>
           <h3>Select a run</h3>
           <p>Inspect the plan, agent trace, tool outputs, and approval decisions.</p>
         </div>
@@ -79,7 +80,10 @@ Pilot constraint | Any customer-facing output must be reviewed by a support lead
   </main>
 
   <footer><span>CAPSTONE / v2.0.0</span><span>LOCAL-FIRST · AUDITABLE · HUMAN-GOVERNED</span></footer>
-  <div id="toast" role="status" aria-live="polite"></div>
+  <!-- Live regions: polite status for confirmations, assertive alert for errors, hidden status for loading/progress. -->
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast-error" role="alert" aria-live="assertive" aria-atomic="true"></div>
+  <div id="sr-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>

@@ -228,6 +228,8 @@ The full JSON is printed to the terminal and persisted in `data/workforce.db`. G
 6. If the run reaches `waiting approval`, approve or reject the exact high-risk step.
 7. Review the final artifacts, quality checks, and updated lesson metric.
 
+The dashboard is keyboard operable and screen-reader friendly; see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) for the checklist and how to verify it with browser tooling.
+
 Approved messages are written as JSON files under `data/outbox/`. Delivery is explicitly labeled `simulated`; the project never sends real email.
 
 ## Five-line SDK example

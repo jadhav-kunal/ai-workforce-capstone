@@ -767,6 +767,79 @@ textarea.control-compact {
   transition: var(--motion-fast);
 }
 
+/* Error toast: assertive live region, same shape as #toast */
+#toast-error {
+  position: fixed;
+  bottom: 88px;
+  right: var(--space-24);
+  max-width: calc(100vw - 48px);
+  background: var(--color-danger-ink);
+  color: var(--color-on-dark);
+  border-left: var(--space-6) solid var(--color-danger-bg);
+  padding: var(--space-14) var(--space-18);
+  font-size: var(--text-12);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: var(--motion-fast);
+}
+
+#toast-error:not(:empty)::before {
+  content: "Error: ";
+  font-weight: 700;
+}
+
+/* Run log: entries are buttons inside a list */
+.run-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.run-items .run-card {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border-bottom: var(--border-line);
+}
+
+/* Step status text label */
+.step-status {
+  margin-left: var(--space-6);
+  padding: 1px var(--space-5);
+  border: var(--border-line);
+  font: var(--mono-9-medium);
+  letter-spacing: var(--tracking-badge);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* Accessibility helpers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-12);
+  top: -60px;
+  z-index: 100;
+  background: var(--color-ink);
+  color: var(--color-on-dark);
+  padding: var(--space-12) var(--space-16);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 
 /* 5. States
    ========================================================================== */
@@ -774,6 +847,45 @@ textarea.control-compact {
 /* Focus */
 .control:focus {
   border-color: var(--color-acid);
+}
+
+/* Keyboard focus ring: a thick outline plus a halo, so focus shows by shape, not colour alone */
+:focus-visible,
+.control:focus-visible {
+  outline: var(--space-3) solid var(--color-ink);
+  outline-offset: var(--space-3);
+  box-shadow: 0 0 0 var(--space-6) var(--color-paper);
+}
+
+.command-panel :focus-visible {
+  outline-color: var(--color-acid);
+  box-shadow: 0 0 0 var(--space-6) var(--color-dark);
+}
+
+.switch input:focus-visible + span {
+  outline: var(--space-3) solid var(--color-acid);
+  outline-offset: var(--space-3);
+  box-shadow: 0 0 0 var(--space-6) var(--color-dark);
+}
+
+.run-items .run-card:focus-visible {
+  outline-offset: calc(var(--space-3) * -1);
+  box-shadow: none;
+}
+
+.skip-link:focus {
+  top: var(--space-12);
+}
+
+main:focus,
+#detail-title:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+#detail-title:focus-visible {
+  outline: var(--space-3) solid var(--color-ink);
+  outline-offset: var(--space-4);
 }
 
 /* Hover and selection */
@@ -829,8 +941,19 @@ textarea.control-compact {
   border-color: var(--color-warning-strong);
 }
 
+.step.waiting_approval .step-status {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-ink);
+  border-color: var(--color-warning-border);
+}
+
+.step.completed .step-status {
+  color: var(--color-success-ink);
+}
+
 /* Visibility */
-#toast.show {
+#toast.show,
+#toast-error.show {
   opacity: 1;
   transform: none;
 }
@@ -890,5 +1013,23 @@ textarea.control-compact {
 
   .form-row .btn {
     width: 100%;
+  }
+}
+
+/* User preferences: reduced motion and Windows high-contrast / forced colours */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .step-status,
+  .switch span {
+    border: 1px solid CanvasText;
   }
 }
