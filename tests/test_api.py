@@ -12,7 +12,10 @@ def test_api_lifecycle(tmp_path: Path, monkeypatch) -> None:
     get_orchestrator.cache_clear()
     client = TestClient(create_app())
 
-    assert client.get("/health").json()["status"] == "ok"
+    health = client.get("/health").json()
+    assert health["status"] == "ok"
+    assert health["provider"] == "demo" and health["model"] == "scripted-offline"
+    assert not any("key" in field for field in health)
     response = client.post(
         "/api/runs",
         json={"objective": "Research and send a launch brief", "context": {"send_message": True}},

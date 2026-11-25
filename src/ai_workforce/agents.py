@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from .db import Repository
 from .llm import LLMError, LLMProvider, extract_terms
 from .models import PlanStep, Run
-from .tools import ToolError, ToolRegistry
+from .tools import ToolError, ToolRegistry, planned_expression
 
 MAX_STEPS_PER_RUN = 8
 MAX_REPLANS_PER_RUN = 2
@@ -115,14 +115,15 @@ class PlannerAgent:
                     arguments={"query": run.objective, "k": 5},
                 )
             )
-        if run.context.get("expression") and "data.calculate" not in completed:
+        expression = planned_expression(run.context, run.context.get("_observations", []))
+        if expression and "data.calculate" not in completed:
             proposals.append(
                 ProposedStep(
                     title="Calculate requested metric",
                     agent="analyst",
                     tool="data.calculate",
                     instruction="Evaluate the expression with the safe calculator.",
-                    arguments={"expression": str(run.context["expression"])},
+                    arguments={"expression": expression},
                 )
             )
         if "content.synthesize" not in completed:
@@ -253,7 +254,8 @@ class CriticAgent:
         if not grounded or not all_completed:
             score = 0.6
         reflection = self.provider.complete(
-            "You are a concise quality critic for a governed agent system.",
+            "You are a concise quality critic for a governed agent system. Reply in at most "
+            "two plain-text sentences, with no Markdown, headings, or lists.",
             f"Review objective {run.objective!r}; grounding passed={grounded}; "
             f"completed tools={[step.tool for step in completed]}.",
         )
@@ -289,13 +291,19 @@ class CriticAgent:
         kind = str(claim.get("kind", "evidence"))
         citations = [str(value) for value in claim.get("citations", [])]
         text_without_citations = re.sub(r"\[[^\]]+\]", "", text)
-        if kind == "disclosure" and not source_count:
+        if kind == "disclosure" and (
+            not source_count or (not citations and not self._numbers(text_without_citations))
+        ):
             return {
                 "text": text,
                 "kind": kind,
                 "citations": citations,
                 "supported": True,
-                "reason": "The brief explicitly discloses that no source was supplied.",
+                "reason": (
+                    "The brief explicitly discloses that no source was supplied."
+                    if not source_count
+                    else "The brief discloses a limitation and asserts no figure."
+                ),
             }
         invalid_citations = [
             citation for citation in citations if citation != "CALC" and citation not in passages

@@ -53,7 +53,15 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict[str, str]:
-        return {"status": "ok", "service": "ai-workforce", "version": "2.0.0"}
+        # Reports which provider answers model calls, never its key or endpoint.
+        settings = get_settings()
+        return {
+            "status": "ok",
+            "service": "ai-workforce",
+            "version": "2.0.0",
+            "provider": settings.provider,
+            "model": settings.model if settings.provider != "demo" else "scripted-offline",
+        }
 
     @app.get("/api/tools")
     def tools() -> list[dict[str, Any]]:

@@ -3,6 +3,7 @@ import hashlib
 import json
 import operator
 import os
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -18,6 +19,123 @@ from .models import RiskLevel, utc_now
 
 class ToolError(RuntimeError):
     pass
+
+
+# A sentence ends at . ! or ? followed by whitespace and a capital, digit, or opening mark, so
+# decimals such as "3.5%" or "$6.6 million" stay inside their sentence.
+_SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+(?=[\"'(\[$]?[A-Z0-9])")
+SENTENCES_PER_PASSAGE = 2
+
+# Passages are untrusted data. One that issues orders to the agent is quarantined: it is kept in
+# the trace for the reviewer but never reaches the writer, the brief, or the outbound message.
+_EMAIL = r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"
+_INSTRUCTION_PATTERNS = [
+    (
+        re.compile(r"\b(?:note|message|instructions?)\s+(?:to|for)\s+the\s+(?:agent|assistant|ai)\b"
+                   r"|(?:^|[.!?:]\s+)(?:assistant|agent|ai|system)\s*:", re.IGNORECASE),
+        "addresses the agent directly",
+    ),
+    (
+        re.compile(r"\b(?:ignore|disregard|override)\b[^.]{0,40}\b(?:instructions?|rules?|polic"
+                   r"(?:y|ies)|previous|above)\b", re.IGNORECASE),
+        "tries to override the agent's instructions",
+    ),
+    (
+        re.compile(r"\bapprov(?:al|ed)\b[^.]{0,40}\b(?:granted|already)\b|\bskip\b[^.]{0,30}"
+                   r"\bapproval\b|\bapproval step\b[^.]{0,40}\bskip\b", re.IGNORECASE),
+        "claims approval was granted or asks to skip it",
+    ),
+    (
+        re.compile(r"\brecipient\b[^.]{0,30}\bchanged\b|\binstead of the address\b",
+                   re.IGNORECASE),
+        "tries to change the message recipient",
+    ),
+    (
+        re.compile(r"\bdo not (?:mention|tell|disclose|report)\b", re.IGNORECASE),
+        "asks the agent to hide information",
+    ),
+]
+_SEND_TO_ADDRESS = re.compile(
+    rf"\b(?:send|email|forward|copy|cc|bcc|mail)\b[^.]{{0,80}}?({_EMAIL})", re.IGNORECASE
+)
+
+
+def planned_expression(
+    context: dict[str, Any], observations: list[dict[str, Any]]
+) -> Optional[str]:
+    """The expression a plan should calculate, repaired after a calculator error.
+
+    None means no calculation should be planned: none was requested, or it already failed and
+    has no valid repair (the writer then discloses that the figure is missing).
+    """
+    expression = context.get("expression")
+    if not expression:
+        return None
+    if not any(item.get("tool") == "data.calculate" for item in observations):
+        return str(expression)
+    try:
+        SafeCalculatorTool().evaluate(str(expression))
+    except ToolError:
+        return repair_expression(str(expression))
+    return str(expression)  # Valid input, so the failure was transient: retry it.
+
+
+def split_sentences(text: str) -> list[str]:
+    return [part.strip() for part in _SENTENCE_BOUNDARY.split(text.strip()) if part.strip()]
+
+
+def _terms(value: str) -> set[str]:
+    return {
+        word
+        for word in ("".join(c for c in raw.lower() if c.isalnum()) for raw in value.split())
+        if len(word) >= 3
+    }
+
+
+def best_sentences(content: str, query: str, limit: int = SENTENCES_PER_PASSAGE) -> list[str]:
+    """The `limit` sentences that share the most terms with the query, in passage order."""
+    sentences = split_sentences(content)
+    if len(sentences) <= limit:
+        return sentences
+    query_terms = _terms(query)
+    ranked = sorted(
+        range(len(sentences)),
+        key=lambda index: (-len(_terms(sentences[index]) & query_terms), index),
+    )
+    return [sentences[index] for index in sorted(ranked[:limit])]
+
+
+def instruction_flags(text: str, allowed_recipient: Optional[str] = None) -> list[str]:
+    """Reasons a passage reads as orders to the agent rather than evidence; empty if none."""
+    reasons = [reason for pattern, reason in _INSTRUCTION_PATTERNS if pattern.search(text)]
+    allowed = (allowed_recipient or "").lower()
+    if any(match.lower() != allowed for match in _SEND_TO_ADDRESS.findall(text)):
+        reasons.append("asks for a message to an address the user did not give")
+    return reasons
+
+
+def repair_expression(expression: str) -> Optional[str]:
+    """Fix common typos in an arithmetic expression; None when no valid repair exists.
+
+    Repairs: thousands separators and currency signs, x/× and ÷ for * and /, an operator typed
+    twice ("1200 * * 0.42"), a trailing operator, and unbalanced parentheses.
+    """
+    text = expression.replace(",", "").replace("$", "").replace("×", "*").replace("÷", "/")
+    text = re.sub(r"(?<=[\d)])\s*[xX]\s*(?=[\d(])", " * ", text)
+    text = re.sub(r"([+*/%])(?:\s+\1)+", r"\1", text)
+    text = re.sub(r"[\s+\-*/%]+$", "", text).strip()
+    missing = text.count("(") - text.count(")")
+    if missing > 0:
+        text += ")" * missing
+    elif missing < 0:
+        text = "(" * -missing + text
+    if not text or text == expression.strip():
+        return None
+    try:
+        SafeCalculatorTool().evaluate(text)
+    except ToolError:
+        return None
+    return text
 
 
 @dataclass(frozen=True)
@@ -105,12 +223,24 @@ class KnowledgeSearchTool(Tool):
                 "source_count": 0,
                 "query": context.inputs.get("query", context.objective),
                 "grounding_mode": "hypothesis",
+                "quarantined": [],
             }
+        quarantined: list[dict[str, Any]] = []
+        trusted: list[dict[str, Any]] = []
+        for item in normalized:
+            reasons = instruction_flags(
+                f"{item['title']}: {item['content']}", context.inputs.get("recipient")
+            )
+            if reasons:
+                quarantined.append({"id": item["id"], "title": item["title"], "reasons": reasons})
+            else:
+                trusted.append(item)
+        normalized = trusted
         query = str(context.inputs.get("query") or context.objective)
         query_tokens = self._tokens(query)
         corpus = [self._tokens(f"{item['title']} {item['content']}") for item in normalized]
         ranked = normalized
-        if query_tokens and all(corpus):
+        if query_tokens and corpus and all(corpus):
             scores = BM25Okapi(corpus).get_scores(query_tokens)
             ranked = [
                 item
@@ -123,7 +253,8 @@ class KnowledgeSearchTool(Tool):
             "findings": ranked[:k],
             "source_count": len(normalized),
             "query": query,
-            "grounding_mode": "supplied_sources",
+            "grounding_mode": "supplied_sources" if normalized else "hypothesis",
+            "quarantined": quarantined,
         }
 
     @staticmethod
@@ -143,23 +274,42 @@ class SynthesisTool(Tool):
     def execute(self, context: ToolContext) -> dict[str, Any]:
         evidence: list[dict[str, Any]] = []
         calculations: list[dict[str, Any]] = []
+        quarantined: list[dict[str, Any]] = []
         for output in context.prior_outputs:
-            evidence.extend(output.get("findings", []))
+            quarantined.extend(output.get("quarantined", []))
+            # Without supplied sources the search echoes the objective as S0; that is not evidence.
+            if output.get("grounding_mode") != "hypothesis":
+                evidence.extend(output.get("findings", []))
             if "expression" in output and "value" in output:
                 calculations.append(output)
         titles = [item.get("title", "evidence") for item in evidence]
+        query = f"{context.objective} {context.inputs.get('query', '')}"
         claims: list[dict[str, Any]] = []
         for item in evidence[:3]:
             passage_id = item.get("id", "S0")
             content = str(item.get("content", "")).strip()
             if not content:
                 continue
-            sentence = content.split(".")[0].strip()
+            sentences = best_sentences(content, query)
+            text = " ".join(
+                sentence if sentence[-1] in ".!?" else f"{sentence}." for sentence in sentences
+            )
             claims.append(
                 {
-                    "text": f"{sentence}. [{passage_id}]",
+                    "text": f"{text} [{passage_id}]",
                     "citations": [passage_id],
                     "kind": "evidence",
+                }
+            )
+        if context.inputs.get("expression") and not calculations:
+            claims.append(
+                {
+                    "text": (
+                        "The requested calculation could not be completed with the safe "
+                        "calculator, so no computed figure is reported."
+                    ),
+                    "citations": [],
+                    "kind": "disclosure",
                 }
             )
         for calculation in calculations:
@@ -173,10 +323,13 @@ class SynthesisTool(Tool):
                     "kind": "calculation",
                 }
             )
-        if not claims:
+        if not evidence:
             claims.append(
                 {
-                    "text": "No supporting passage was supplied; recommendations are provisional.",
+                    "text": (
+                        "No supporting source passage was supplied; the brief is provisional and "
+                        "its conclusions are hypotheses to verify before acting."
+                    ),
                     "citations": [],
                     "kind": "disclosure",
                 }
@@ -193,6 +346,9 @@ class SynthesisTool(Tool):
                     "Review run metrics and captured lessons before scaling.",
                 ],
                 "evidence_used": titles or ["Objective brief"],
+                "quarantined_sources": [
+                    {"id": item["id"], "reasons": item["reasons"]} for item in quarantined
+                ],
                 "revision_notes_applied": critic_notes,
             }
         }
@@ -271,12 +427,14 @@ class SafeCalculatorTool(Tool):
 
     def execute(self, context: ToolContext) -> dict[str, Any]:
         expression = str(context.inputs.get("expression", "1 + 1"))
+        return {"expression": expression, "value": self.evaluate(expression)}
+
+    def evaluate(self, expression: str) -> float:
         try:
             tree = ast.parse(expression, mode="eval")
-            result = self._evaluate(tree.body)
-        except (SyntaxError, TypeError, ValueError, ZeroDivisionError) as exc:
+            return self._evaluate(tree.body)
+        except (SyntaxError, TypeError, ValueError, ZeroDivisionError, OverflowError) as exc:
             raise ToolError(f"Invalid calculation: {exc}") from exc
-        return {"expression": expression, "value": result}
 
     def _evaluate(self, node: ast.AST) -> float:
         if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="AI Workforce operations console">
   <title>AI Workforce — Operations Console</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -15,7 +16,7 @@
       <span class="brand-mark" aria-hidden="true">AW</span>
       <span>AI Workforce</span>
     </a>
-    <div class="system-state"><i aria-hidden="true"></i> SYSTEM ONLINE</div>
+    <div class="system-state" id="system-state" role="status"><i aria-hidden="true"></i> <span id="provider-label">CONNECTING…</span></div>
   </header>
 
   <main id="main" tabindex="-1">
@@ -88,7 +89,7 @@ Pilot constraint | Any customer-facing output must be reviewed by a support lead
         <div class="empty-detail">
           <span aria-hidden="true">⌁</span>
           <h3>Select a run</h3>
-          <p>Inspect the plan, agent trace, tool outputs, and approval decisions.</p>
+          <p>Inspect the plan, the cited brief and the critic's verdicts, tool outputs, and approval decisions.</p>
         </div>
       </aside>
     </section>

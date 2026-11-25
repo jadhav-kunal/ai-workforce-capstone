@@ -1,0 +1,42 @@
+{
+  "input": "/Users/manastole/Downloads/CSE598_AI_Workforce_Milestone_2_Draft.docx",
+  "fonts_by_char_count": {
+    "Consolas": 868
+  },
+  "direct_run_formatting_runs": 15,
+  "direct_paragraph_formatting_paragraphs": 0,
+  "heading_like_paragraphs_not_heading_style": [],
+  "examples": {
+    "direct_run_formatting": [
+      {
+        "para_index": 17,
+        "run_text": "INPUT \u2192 ORCHESTRATOR [baseline] \u2192 PLAN [fixed baseline / LLM extension]",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 18,
+        "run_text": "                            \u2198 MANAGER \u2194 LESSON RETRIEVAL [extension]",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 19,
+        "run_text": "PLAN \u2192 VALIDATE [extension] \u2192 RESEARCH / CALCULATE / SYNTHESIZE [baseline]",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 20,
+        "run_text": "                                  \u2196 REPLAN ON FAILURE [extension]",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 21,
+        "run_text": "SYNTHESIZE \u2192 GROUNDING CRITIC [extension] \u2192 APPROVAL GATE [baseline]",
+        "style": "No Spacing"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

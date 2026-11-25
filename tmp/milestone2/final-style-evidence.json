@@ -1,0 +1,42 @@
+{
+  "input": "/Users/manastole/ASU/Agentic AI/Project/Final Project/ai-workforce-capstone-main/artifacts/milestone2/CSE598_AI_Workforce_Milestone_2_Report.docx",
+  "fonts_by_char_count": {
+    "Consolas": 895
+  },
+  "direct_run_formatting_runs": 16,
+  "direct_paragraph_formatting_paragraphs": 0,
+  "heading_like_paragraphs_not_heading_style": [],
+  "examples": {
+    "direct_run_formatting": [
+      {
+        "para_index": 17,
+        "run_text": "INPUT -> MANAGER + SQLITE STATE -> LESSON RETRIEVAL (top three, advisory)",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 18,
+        "run_text": "MANAGER -> PROVIDER PLAN -> PYDANTIC / TOOL / BUDGET VALIDATION",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 19,
+        "run_text": "VALID PLAN -> SEARCH -> CALCULATE -> SYNTHESIZE -> GROUNDING CRITIC",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 20,
+        "run_text": "INVALID PLAN -> ONE REPAIR -> DETERMINISTIC FALLBACK",
+        "style": "No Spacing"
+      },
+      {
+        "para_index": 21,
+        "run_text": "TOOL OR GROUNDING FAILURE -> OBSERVATION -> BOUNDED REPLAN (max two)",
+        "style": "No Spacing"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

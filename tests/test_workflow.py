@@ -280,6 +280,15 @@ def test_malicious_expression_fails_without_execution(
         "Calculate unsafe input",
         {"expression": "__import__('os').system('false')", "send_message": False},
     )
-    failed = orchestrator.execute(run.id)
-    assert failed.status == RunStatus.FAILED
-    assert "Invalid calculation" in failed.error
+    result = orchestrator.execute(run.id)
+    events = orchestrator.repository.get_events(run.id)
+    failures = [event for event in events if event["type"] == "step.failed"]
+    # The calculator rejects the input without running it, and no repair exists, so the
+    # replanned run drops the figure and the brief says so instead of guessing.
+    assert failures and all("Invalid calculation" in f["payload"]["error"] for f in failures)
+    assert result.status == RunStatus.COMPLETED
+    assert not any("value" in step.output for step in result.plan if step.output)
+    brief = next(
+        step.output["deliverable"] for step in result.plan if step.tool == "content.synthesize"
+    )
+    assert any(claim["kind"] == "disclosure" for claim in brief["claims"])

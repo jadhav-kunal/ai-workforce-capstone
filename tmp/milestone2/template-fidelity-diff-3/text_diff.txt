@@ -1,0 +1,396 @@
+--- a
++++ b
+@@ -1,226 +1,226 @@
+ CSE 598 CAPSTONE PROJECT
+ Milestone 2 Report | AI Workforce: From a Fixed Pipeline to a Governed, Self-Correcting Agent Team
+-Submission status: evidence-grounded draft — fields marked [TO VERIFY] require current team artifacts before submission.
++Verification status: latest main commit f29cb95 rerun November 7, 2026; post-implementation stakeholder review still requires team-supplied meeting notes before submission.
+ Team members
+ Stakeholder / reference
+ Manas Tole; Asmi Phulgam; Shreya Kale; Pratik Chaudhari
+-Kunal Ramesh Jadhav — original proposal author and stakeholder
+-Project repository (baseline)
+-https://github.com/jadhav-kunal/ai-workforce-capstone
++Kunal Ramesh Jadhav - proposal author and stakeholder
++Project repository / tested branch
++github.com/jadhav-kunal/ai-workforce-capstone | main @ f29cb95
+ Report basis
+-Milestone 1 submission dated September 28, 2026; public baseline repository checked November 5, 2026
++Milestone 1; latest main; fresh tests, evidence suite, and 176-run offline evaluation on November 7, 2026
+ Executive Summary
+-AI Workforce is a governed research-to-action platform that turns an objective and supplied evidence into auditable work steps, calculations, an action brief, and, only after explicit approval, a simulated stakeholder message. The original baseline already provides persistent run state, registered tools, policy gating, an event trace, and offline execution. Milestone 1 proposed an LLM-driven planner, plan validation, observation-based replanning, evidence-grounding critic, and memory-conditioned future planning. This report distinguishes verified baseline functionality from planned extensions and sets out the precise demonstrations and measurements needed to substantiate Milestone 2. No invented follow-up meeting, dataset scores, execution screenshots, or individual Git commits are represented as completed work.
++AI Workforce now implements the governed agentic design proposed in Milestone 1: provider-generated typed plans, schema validation with one repair and deterministic fallback, bounded replanning, BM25 evidence and lesson retrieval, claim-level grounding checks, exact-step approval, and idempotent simulated messaging. On latest main commit f29cb95, Ruff passed, all 65 automated tests passed, and statement coverage reached 91%. A fresh deterministic evidence run passed 5/5 scenarios, produced 0/2 unauthorized actions, created exactly 1/1 approved outbox entry, preserved complete traces, and calculated 1,200 x 42% = 504. The full offline comparison executed 176 scored test runs across two versioned datasets and four conditions. These results demonstrate reproducible orchestration and governance, but not live-model quality: task success, recovery, citation precision, prompt-injection handling, human ratings, tokens, and cost still require improvement or additional evidence.
+ 1. Stakeholder Follow-up and Final Deliverables
+ 1.1 Stakeholder meetings
+-The documented stakeholder discovery meeting took place on September 28, 2026. Participants were Kunal Ramesh Jadhav and team members Manas Tole, Asmi Phulgam, Shreya Kale, and Pratik Chaudhari. The team reviewed the fixed-pipeline baseline, the proposed manager-worker architecture, a research-to-action use case, safety constraints, and the evaluation approach. The stakeholder agreed to retain the simulated-outbox scope and emphasized dynamic planning, failure recovery, useful memory, fair comparisons, and offline reproducibility. A later Milestone 2 follow-up meeting is not evidenced by the supplied materials: [TO VERIFY meeting date, attendees, agenda, demonstration, exact stakeholder comments and decisions].
++The documented stakeholder discovery meeting occurred September 28, 2026 with Kunal Ramesh Jadhav and team members Manas Tole, Asmi Phulgam, Shreya Kale, and Pratik Chaudhari. The group reviewed the fixed-pipeline baseline, the manager-worker design, safety boundaries, and evaluation plan. The recorded direction was to retain simulated delivery and prioritize dynamic planning, recovery, useful memory, fair comparisons, and offline reproducibility. The repository and supplied files do not contain dated notes from the required post-implementation Milestone 2 review. Before submission, the group must add the meeting date, attendees, demonstrated build, Kunal's exact feedback, the team's response, and confirmation of final deliverables; this report does not invent those facts.
+ Feedback
+-Team response / rationale
++Team response / current evidence
+ Next action / evidence
+ Fixed planning limits unfamiliar objectives
+-Milestone 1 specified schema-constrained LLM planning with deterministic fallback; current implementation status [TO VERIFY].
+-Show an off-template task, planner output and validation trace.
++Implemented provider plans, Pydantic validation, one repair, and deterministic fallback; plan-first validity was 22/22 for P.
++Run live-provider off-template cases and inspect plan quality.
+ Tool errors terminate the baseline
+-Milestone 1 proposed up to two replans based on observations, retaining a capped step budget.
+-Provide a successful/failed injected-tool run and replan log.
++Implemented durable observations and up to two replans; P recovered 1/3 injected failures versus B1's 0/3.
++Fix the two failed case IDs and rerun the frozen split.
+ Stored lessons need to affect future work
+-Proposed top-three BM25 lesson retrieval as advisory context, without granting policy authority.
+-Run paired memory-on vs memory-off follow-up cases.
++Implemented top-three BM25 lesson retrieval with source-run provenance; P averaged 2.682 lessons on Dataset A.
++Use a planner that reads lessons and rerun the P-M/P ablation.
+ Briefs must be grounded and useful
+-Proposed code citation/number checks plus LLM critic and one writer revision.
+-Show a critic verdict, source passage, revision, and human ratings.
++Implemented passage IDs, numeric checks, critic verdicts, and one revision; P citation precision was 76.9% on Dataset A.
++Add semantic support checks and three-rater human scoring.
+ High-risk actions must remain governed
+-Retain exact run-and-step approval and simulated outbox; do not enable real sending.
+-Test malicious instructions, rejection and duplicate-send resistance.
++Exact-step approval and idempotent outbox retained; 0/2 unauthorized scenario actions and P 0/4 in Dataset A.
++Re-test after content-injection fixes; keep simulated delivery.
+ Fairness, cost and reproducibility matter
+-Compare B0, B1 and improved system on identical examples and model settings.
+-Publish datasets, scoring script, latency/tokens and offline tests.
++Published two versioned datasets, raw traces, scoring code, and offline results; tokens/cost and human ratings remain unavailable.
++Run equal-budget live conditions and document stakeholder review.
+ 1.2 Final scope and acceptance criteria
+-The agreed Milestone 1 scope is a single research-to-action workflow: intake of a natural-language objective and up to six sources; optional numeric computation; a typed, auditable plan; sourced brief; verification; and a simulated message step requiring human approval. Real email/Slack delivery, unrestricted web and shell access, production authentication, fine-tuning, and high-impact automated decisions remain outside scope. The Milestone 2 follow-up must explicitly reconfirm or revise these boundaries [TO VERIFY].
+-Acceptance targets inherited from Milestone 1 include zero unauthorized actions, 100% reconstructable traces and offline reproducibility, at least 85% task success, at least 90% citation precision, at least 75% injected-failure recovery, and no more than five times B0 token usage. These are planned thresholds, not achieved scores.
++The implemented scope remains one research-to-action workflow: accept an objective and supplied sources; retrieve evidence; optionally calculate a metric; create and validate a typed plan; synthesize and verify a cited brief; persist events and lessons; and require human approval for the exact simulated message step. The team added dynamic planning, validation/repair/fallback, bounded replanning, grounding checks, advisory memory, evaluation tooling, and idempotency. Real email/Slack delivery, unrestricted web or shell access, production identity and tenancy, fine-tuning, and high-impact automated decisions remain outside scope. Final stakeholder sign-off on these deliverables is still required.
++Milestone 1 targets were zero unauthorized actions, 100% reconstructable traces, at least 85% task success, at least 90% citation precision, at least 75% injected-failure recovery, and bounded cost. Current deterministic scenario checks meet the first two targets, but the 22-case stakeholder test split does not meet the quality/recovery targets: P achieved 31.8% task success, 76.9% gold-evidence citation precision, and 33.3% recovery. Provider tokens and cost were not emitted in demo mode.
+ 2. Implemented Agentic System
+ 2.1 Verified baseline and scope of extensions
+-The publicly accessible baseline repository documents a Python/FastAPI application with Pydantic validation, a SQLite-backed orchestrator, a constrained planner, four registered tools, an approval gate, a simulated outbox, demo mode and an optional OpenAI-compatible provider. Its README identifies dynamic model-generated planning as planned. Consequently, we classify the added LLM planner, validation-and-repair loop, grounding critic, and memory-conditioned planning as proposed until code or traces from the team branch are supplied. This is deliberately different from asserting that the complete Milestone 1 architecture is already deployed.
++At commit f29cb95 the extension is implemented rather than merely proposed. The Python/FastAPI application uses Pydantic schemas, SQLite state, a provider-backed planner, one invalid-plan repair, deterministic fallback, four registered tools, up to two observation-driven replans, a grounding critic with one writer revision, BM25 evidence and lesson ranking, an approval gate, an idempotent simulated outbox, CLI/API/dashboard/SDK interfaces, and a reproducible evaluation runner. The demo provider permits offline testing without an API key; an OpenAI-compatible provider remains optional.
+ Component
+ Baseline supported
+-Milestone 1 extension / current evidence status
+-Intake + REST/CLI/dashboard
+-Documented implemented
+-Retain; attach current screenshots.
++Milestone 2 implementation / evidence
++Intake + REST/CLI/dashboard/SDK
++Implemented
++Retained; current UI evidence and lifecycle tests present.
+ State machine + SQLite events
+-Documented implemented
+-Verify resumed execution and complete traces.
++Implemented
++Expanded persistence, complete traces, safe resume, concurrent idempotency.
+ Planner
+-Fixed deterministic planner
+-LLM tool/function calls, Pydantic schema, repair and fallback — [TO VERIFY].
++Fixed deterministic plan
++Provider-generated typed plans, schema/tool/order/budget checks, one repair, fallback.
+ Research/analysis/writing
+-Registered tools implemented
+-BM25 passage IDs and sourced synthesis — [TO VERIFY enhancements].
++Registered tools
++BM25 passage IDs, restricted arithmetic, sourced structured claims.
+ Critic + lessons
+-Baseline formula score and saved lessons
+-Claim-grounding LLM critic and prompt-injected relevant lessons — [TO VERIFY].
++Formula score and saved lessons
++Claim/numeric critic, one revision, top-three source-linked BM25 memories.
+ Approval + outbox
+-Documented implemented
+-Retain exact-step authorization and idempotency tests.
++Exact-step gate
++Retained; recipient pinning, 0 unauthorized actions, exactly-once simulated write.
+ 2.2 Workflow and diagram
+-Current baseline (solid path): objective and sources → orchestrator / persisted state → fixed planner → researcher / analyst / writer tools → code-enforced approval gate → simulated outbox or safe rejection → stored event history and scored lesson. The proposed extensions (dashed paths) add top-three relevant lesson retrieval before planning, LLM-generated typed steps with validation and fallback, observation-based replanning after errors, and grounding checks with one draft revision before any message.
+-INPUT → ORCHESTRATOR [baseline] → PLAN [fixed baseline / LLM extension]
+-                            ↘ MANAGER ↔ LESSON RETRIEVAL [extension]
+-PLAN → VALIDATE [extension] → RESEARCH / CALCULATE / SYNTHESIZE [baseline]
+-                                  ↖ REPLAN ON FAILURE [extension]
+-SYNTHESIZE → GROUNDING CRITIC [extension] → APPROVAL GATE [baseline]
+-                                             → SIMULATED OUTBOX [baseline]
+-ALL STEPS → SQLITE STATE, EVENTS, OUTPUTS [baseline]
+-Figure 1. Architecture at the baseline/extension boundary. Extension arrows are conceptual and must be relabeled “implemented” only after verifying the submitted commit and a current run.
++Implemented flow: the manager persists the objective and retrieves up to three advisory lessons; the planner proposes typed registered-tool steps; the validator checks tools, arguments, order, budgets, and recipient pinning; workers execute search, calculation, and synthesis; the critic verifies cited passage IDs and numeric support; failures or weak grounding can replan the unfinished work within caps; and a high-risk message pauses for approval before one idempotent local outbox write. Every transition is stored in SQLite.
++INPUT -> MANAGER + SQLITE STATE -> LESSON RETRIEVAL (top three, advisory)
++MANAGER -> PROVIDER PLAN -> PYDANTIC / TOOL / BUDGET VALIDATION
++VALID PLAN -> SEARCH -> CALCULATE -> SYNTHESIZE -> GROUNDING CRITIC
++INVALID PLAN -> ONE REPAIR -> DETERMINISTIC FALLBACK
++TOOL OR GROUNDING FAILURE -> OBSERVATION -> BOUNDED REPLAN (max two)
++VERIFIED BRIEF -> EXACT-STEP APPROVAL -> IDEMPOTENT SIMULATED OUTBOX
++ALL STEPS -> SQLITE RUNS, ARGUMENTS, OUTPUTS, EVENTS, APPROVALS, LESSONS
++Figure 1. Implemented architecture and code-owned governance boundaries at main commit f29cb95.
+ 2.3 Decisions, information flow, tools, state and recovery
+-The manager owns the objective, retrieval context and execution budgets. In the proposed design, the planner reads the objective, available tool schemas, previous observations and up to three retrieved lessons, then requests typed tool calls. The plan validator would reject unknown tools, malformed arguments, unauthorized recipients and budget violations. The worker tools are knowledge.search(query,k), data.calculate(expression), content.synthesize(context), and app.message(payload). Their outputs become step observations saved to SQLite and determine whether the run advances, pauses, repairs or replans. A critic would inspect cited passage identifiers, arithmetic consistency and evidence support; failed verification triggers at most one rewrite. A message step is not authorized by planner text or retrieved documents: the policy gate requires human approval of that exact step. The system stores the approval decision, step status and output, allowing the evaluator to reconstruct the run.
+-The original system uses Python 3.9+, FastAPI, SQLite and Pydantic. Milestone 1 nominated rank-bm25, GPT-4o-mini at temperature 0.2 through an OpenAI-compatible provider, optional Qwen2.5-7B-Instruct via Ollama, and a deterministic DemoProvider for offline tests. These live-model choices are proposal settings rather than proof of current configured execution. The team intentionally preferred extending its tested state machine over introducing LangGraph or AutoGen. Proposed budgets are eight steps, two replans, one repair attempt and a run token cap [TO VERIFY actual configured cap].
++The provider receives the objective, public context, registered tool schemas, prior observations, completed tools, retrieved lessons, and remaining budget, but it never receives direct authority to execute. Code validates a one-to-eight-step plan, copies risk from the registry, requires synthesis before messaging, and pins the user-supplied recipient. knowledge.search assigns stable passage IDs, data.calculate evaluates a restricted arithmetic AST, content.synthesize carries passage/CALC citations into structured claims, and app.message writes only after exact-step approval. Tool exceptions become durable observations; completed steps survive replanning, and duplicate start/approval calls are suppressed by run-and-step idempotency.
++The verified environment uses Python 3.9+ (rerun here on Python 3.14.4), FastAPI, SQLite, Pydantic, and rank-bm25. Runtime caps are eight attempted steps, two replans, one plan repair, one grounding revision, and three OpenAI-compatible provider attempts with exponential backoff. Demo mode is deterministic and offline. Live-provider model quality, token use, cost, and retry behavior under real network faults were not measured in this run.
+ 3. Preliminary Evaluation Results and Analysis
+ 3.1 Datasets and evaluation conditions
+-Milestone 1 planned a versioned 30-example suite split into eight development and 22 held-out examples. Categories were: C1 research-to-brief (10), C2 research+calculation+message (8), C3 off-template requests (4), C4 injected failures (4), and C5 adversarial sources (4). Each example was to include 2–6 sources and gold labels for expected tools, numeric answer, 3–5 essential facts and approval behavior. The source document does not establish that these examples were generated or executed. Their actual count and file paths must be checked.
+-Milestone 2 additionally requires at least two datasets. Dataset A should be the versioned stakeholder-specific research-to-action suite if completed. Dataset B should be a separate held-out task collection with independently documented origin, annotation and sampling—for example, openly licensed reports transformed into cited brief/calculation tasks. Before reporting outcomes, record Dataset B’s license, case count, evaluated sample, labels and relationship to the stakeholder workflow. Do not count the eight development cases as an independently sourced second dataset.
++Dataset A is datasets/workforce_scenarios_v1.json, a team-authored MIT-licensed suite of 30 synthetic cases aligned to categories C1-C5: research briefs (10), calculation/approval (8), off-template requests (4), injected failures (4), and adversarial sources (4). The fixed split contains 8 development and 22 test cases; all 22 test cases were evaluated. Gold fields cover expected tools, evidence, numeric answers, approval behavior, and safety. Stakeholder review remains explicitly pending in the dataset metadata.
++Dataset B is datasets/finqa_pilot_v1.json, a reproducible 30-case MIT-licensed subset of the public FinQA benchmark (Chen et al., EMNLP 2021), also split 8 development/22 test. scripts/build_finqa_subset.py verifies pinned source hashes, preserves official splits, orders eligible cases deterministically by ID hash, and selects one case per filing. All 22 test cases were evaluated, providing an independently sourced retrieval, citation, and arithmetic challenge.
+ Dataset
+ Source / size
+ Pilot evaluated
+ What it tests
+-A: stakeholder-specific cases
+-Team-authored 30-case plan; actual version [TO VERIFY]
+-[TO VERIFY]
+-Task decomposition, accuracy, approval, failure, adversarial content
+-B: independent held-out cases
+-[TO PROVIDE source, license, generation/annotation and size]
+-[TO VERIFY]
+-Generalization beyond the team-designed templates
++A: workforce_scenarios v1.0.0
++Team-authored synthetic; MIT; 30 cases (8 dev/22 test)
++22 test cases x 4 conditions
++Workflow, calculation, approval, recovery, adversarial sources
++B: finqa_pilot v1.0.0
++FinQA public benchmark subset; MIT; 30 cases (8 dev/22 test)
++22 test cases x 4 conditions
++Independent retrieval, citation, and financial arithmetic
+ 3.2 Compared systems
+-B0 is a single GPT-4o-mini completion taking the entire objective, evidence and numbers as context; it writes a cited brief without tool execution, persistent state or executable approval. B1 is the original fixed-pipeline workforce, using registered calculation/research/writing/message tools, persistent trace and approval but no error-driven replanning or grounding critic. P is the enhanced agentic system, once its implementation is verified, with model-selected typed plans, validation, recovery, grounding checks and advisory memory. An optional P−M ablation disables retrieved lessons to isolate memory benefit. Use the same cases, model, temperature (planned 0.2), input documents and budget disclosures across conditions; state differences in tool access and extra agent calls explicitly.
++The offline runner compared B0 (single canned completion), B1 (fixed pipeline), P-M (enhanced planning without memory), and P (enhanced planning with seeded lessons) on identical test cases. Each condition used its own database; P was seeded from development runs. The run produced 176 scored test executions plus 16 lesson-seed runs. Because the provider was scripted, B0 text was canned and P/P-M planning did not read lessons; therefore the comparison measures orchestration, retrieval, approval, and trace behavior, not live-model quality or memory benefit.
+ 3.3 Metrics, scoring and results
+-Task success is the fraction of cases whose end product contains required facts, matches the gold numeric answer when applicable, and reaches the proper workflow outcome. Calculation accuracy is the share of numeric answers within 0.5% of the gold value. Citation precision is the proportion of cited factual claims genuinely supported by the cited passage; key-fact recall is gold facts included divided by gold facts. Plan validity is valid generated plans divided by plans attempted; tool-use success excludes intentionally injected failures; recovery rate is injected-failure cases completed without manual intervention. Unauthorized-action rate counts message steps executed without exact approval divided by high-risk attempts. Trace completeness checks whether saved records reconstruct all states, tool arguments, outputs and decisions. Report median token use, USD cost and wall-clock latency excluding approval wait. For human scoring, proposed blind 1–5 ratings cover relevance, traceability, feasibility, approval appropriateness and trace clarity; record rubric, raters and agreement.
++Task success requires the expected workflow outcome, required facts, and an in-tolerance numeric answer when applicable. Citation precision checks whether cited passage IDs are in the gold evidence set; it is not semantic entailment. Recovery is recovered injected-failure cases divided by injected attempts. Unauthorized-action rate counts high-risk calls before approval. Trace completeness checks persisted lifecycle records. Rates below pool one run per test case; no confidence interval is claimed. Tokens/cost and blinded human ratings were not collected, and scripted approvals are not human review.
+ Dataset / metric
+ B0: single call
+ B1: fixed pipeline
+ P: enhanced agent
+-A — task success (%)
+-Not measured in supplied evidence
+-Not measured
+-Not measured
+-A — citation precision (%)
+-Not measured
+-Not measured
+-Not measured
+-A — recovery (%)
+-Not measured
+-Not measured
+-Not measured
+-B — task success (%)
+-Not measured
+-Not measured
+-Not measured
+-B — citation precision (%)
+-Not measured
+-Not measured
+-Not measured
+-B — recovery (%)
+-Not measured
+-Not measured
+-Not measured
+-Median tokens / latency
+-Not measured
+-Not measured
+-Not measured
+-Unauthorized action rate
+-Not measured
+-Not measured
+-Not measured
+-Table 3. Mandatory comparison matrix. “Not measured” means no experimental outputs were provided, not that the system scored zero. Populate with actual numerators, denominators, run IDs, confidence intervals or run-to-run variation before final submission.
+-The public baseline README reports that its original 12 automated tests passed with 78% total coverage; this is a repository-reported baseline software-test result, not a comparison result for the required two datasets. Its deterministic example records completion and a formula-based quality score of 0.85. Milestone 1 explicitly cautions that this score is based on step completion rather than independent evidence quality. It must not be substituted for human ratings or citation precision.
+-Without paired evaluation logs, no defensible conclusion can yet be made that P exceeds B0 or B1. The expected direction is improved safety and traceability over B0 and better off-template performance and recovery than B1, balanced against more tokens and latency; these remain hypotheses. The next experiment should analyze failures by category and distinguish arithmetic mistakes, bad evidence retrieval, unsupported claims, malformed planning and approval violations.
++A - task success
++0.0% (0/22)
++36.4% (8/22)
++31.8% (7/22)
++A - citation precision
++n/a
++76.0% (38/50)
++76.9% (40/52)
++A - recovery
++n/a
++0.0% (0/3)
++33.3% (1/3)
++B - task success
++0.0% (0/22)
++0.0% (0/22)
++0.0% (0/22)
++B - citation precision
++n/a
++28.8% (19/66)
++28.8% (19/66)
++B - recovery
++n/a
++n/a
++n/a
++Median latency A / B
++0.010 / 0.174 ms
++4.918 / 6.115 ms
++10.315 / 18.798 ms
++Unauthorized action rate A
++n/a
++0.0% (0/9)
++0.0% (0/4)
++Table 3. Fresh offline comparison on main f29cb95 (22 held-out cases per dataset and condition; one repeat). P-M matched P on reported quality metrics and is discussed in the text. n/a means the metric had no denominator or the demo provider did not emit it.
++Independent software verification also passed: Ruff reported no violations; pytest completed 65/65 tests; and statement coverage was 91% (1,543 statements, 143 missed). A separate five-scenario evidence run passed 5/5 with 0/2 unauthorized actions, 1/1 approved outbox entry, complete traces, the expected 504.0 calculation, and 8.421 ms median local execution latency excluding approval wait.
++The results do not show P outperforming B1 on end-product success: on Dataset A, B1 scored 36.4% while P scored 31.8%; both scored 0% on FinQA. P improved retrieval recall on Dataset A (100.0% vs. 95.1%) and recovered 1/3 injected failures where B1 recovered 0/3, but still missed the planned thresholds. Exact approval behavior and trace completeness were 100% for applicable B1/P runs. The strongest conclusion is that governance and observability work reproducibly; answer quality and robust recovery remain incomplete.
+ 4. Demo or End-to-End Case Study
+-4.1 Documented baseline run
+-The baseline repository documents an actual deterministic run with input: “Analyze the AI support pilot evidence and prepare an action brief.” The CLI command is: workforce run "Analyze the AI support pilot evidence and prepare an action brief." --no-message. The recorded run completed a knowledge.search step followed by content.synthesize, with run status completed, no error and a formula-based quality_score of 0.85. The sample disclosed that no external sources had been supplied. Because the request disabled messaging, there was no high-risk action or approval step. This is useful proof of the baseline intake, delegation, execution, state trace and final output, but it does not demonstrate the new planner, critic or recovery loop.
+-Figure 2 [INSERT verified screenshot from artifacts/evidence/baseline-success.png]. Caption: Baseline dashboard with completed deterministic run and recorded steps. Figure 3 [INSERT artifacts/evidence/baseline-result.png]. Caption: Baseline action brief, review field and execution trace. These are baseline screenshots, not screenshots of the upgraded Milestone 2 system.
+-4.2 Required current-system run
+-For the final Milestone 2 demo, run the improved branch on an objective requiring real supplied evidence, a numeric calculation and a simulated sponsor update. Capture (a) initial input and source passage identifiers, (b) planner-proposed tools and arguments, (c) search passages and calculation JSON, (d) the critic’s claim-by-claim verdict and any revision, (e) waiting_approval and exact-step consent, and (f) the final brief, outbox entry and full event history. Record the run ID and expected numeric answer. Explain at each step how its observation changes the next action. [CURRENT SYSTEM RUN ID, SCREENSHOTS, TRACE AND OUTPUT NOT PROVIDED.]
++4.1 Current verified run
++The fresh S2 demonstration used run run_a9f7397472c9 with objective 'Evaluate the AI support assistant pilot, calculate impact, and notify the sponsor.' Two supplied passages stated that the team receives 1,200 monthly tickets, 42% are repetitive tier-one requests, and customer-facing output requires support-lead review. The model-sourced plan searched two passages (S1/S2), evaluated 1200 * 0.42 = 504.0, synthesized three supported claims with S1/S2/CALC citations, and queued a high-risk email to the pinned project-sponsor@example.com recipient. The run paused in waiting_approval with zero outbox entries; exact-step approval then completed the same run and created exactly one local simulated artifact.
++  Figures 2-3. Current dashboard at exact-step approval (left) and after one approved simulated outbox write (right).
++4.2 Observation-to-action trace
++Search observations established the two stable passage IDs used by the writer and critic. The calculator observation supplied 504.0 and a CALC citation. The critic marked all three claims supported and the calculation consistent, so no revision or replan was needed. The message step could not execute from planner text, source text, or prior memory; the runtime required approval bound to step_5274975d3715. Approval produced one outbox record and a complete event history. Companion checks covered rejection with no side effect, blocked malicious arithmetic, related-run lesson reuse, and exactly-once execution.
+ 5. Failure Analysis and Current Limitations
+-A concrete documented limitation of the original baseline is its fixed planner: it cannot dynamically revise the remainder of a run when a tool fails. The baseline repository also states that the default example can produce a completed run without external sources, appropriately disclosing that absence, but this does not establish that its brief is substantively grounded. These are architecture/output limitations, not evidence of a failed enhanced-system experiment.
+-The Milestone 2 failure case should involve one reproducible exception, such as an injected knowledge.search timeout or invalid arithmetic expression. Save the exact input, tool/error response, subsequent agent action, final state and run trace. If P fails, determine whether the issue is in planning, validation, state persistence, timeout handling or grounding—not simply “the LLM failed.” A proposed fix is to send the concrete tool observation back to the bounded planner and enforce plan-schema validation on the revised steps. Confirm success by rerunning the same fixed seed and fault injection, testing no duplicate side effects and reporting recovered runs / injected-failure attempts. [ACTUAL FAILURE TRACE AND DIAGNOSIS TO ADD.]
+-Broader unresolved limits include the small planned evaluation set, synthetic rather than operational data, reliance on supplied sources rather than live retrieval, an optional model service that can timeout or incur cost, uncertainty in LLM critic judgments, and simulated-only message delivery. The original design intentionally avoids production identity, unrestricted tools and real high-impact side effects; these scope restrictions should not be presented as implementation defects.
++The current failures are measurable rather than hypothetical. P completed 7/22 Dataset A cases (31.8%) and 0/22 FinQA cases; calculation accuracy was 7/11 on Dataset A and 0/22 on FinQA. Expected-tool matching was 19/22 for Dataset A and 0/22 for FinQA, showing that the scripted plan and evaluator are not adapted to the benchmark's arithmetic workflow. Citation precision was 76.9% on Dataset A and 28.8% on FinQA, below the planned 90% target.
++Injected-failure recovery improved from 0/3 for B1 to 1/3 for P, but two cases still failed after bounded recovery. More importantly, the recipient-focused injection-resistance check passed 3/3 while B1 and P relayed injected text in 3/3 adversarial outputs. Thus destination pinning worked, but content isolation did not. The next fix should exclude adversarial passages from synthesis after detection, add semantic support checks, and rerun the same case IDs. Regression evidence must preserve the current 0% unauthorized-action rate, exact-step approval, and duplicate suppression.
++Other validity limits are the deterministic demo provider, one repeat per case, scripted approvals, synthetic stakeholder data, lexical BM25 retrieval, no live-provider usage records, no blinded human ratings, and simulated-only delivery. P and P-M had identical task/citation results because the scripted planner ignores lessons, so the current run cannot establish a memory benefit. Production authentication, tenant isolation, durable workers, and connector delivery remain outside the prototype.
+ 6. Remaining Work Before Final Submission
+ Priority / required work
+ Current gap
+ Owners
+ Completion evidence
+-P0 — Verify current team branch
+-Baseline repo does not establish enhanced implementation
+-[ASSIGN actual developer(s)]
+-Commit SHA and tests for planner, validator, critic, replanning
+-P0 — Stakeholder follow-up
+-Only Sept 28 discovery meeting documented
+-[ASSIGN stakeholder liaison]
+-Dated notes and signed-off deliverables
+-P0 — Two datasets / labels
+-30-case plan, second dataset and actual samples unverified
+-[ASSIGN dataset/evaluation owner(s)]
+-Versioned JSON, gold labels and split manifest
+-P0 — B0/B1/P comparisons
+-No measured pairwise results supplied
+-[ASSIGN evaluation owner(s)]
+-Run logs, tables, scripts and error analysis
+-P0 — Current agent demonstration
+-Only baseline demo documented
+-[ASSIGN demo owner(s)]
+-Screenshot series, complete run IDs and exported trace
+-P1 — Failure and safety regression
+-Need real injected error and adversarial run
+-[ASSIGN test owner(s)]
+-Reproduced failure, fix and regression result
+-P1 — Human scoring / cost
+-Blind ratings, tokens and wall time unverified
+-[ASSIGN evaluation owner(s)]
+-Rubric, raw ratings, inter-rater agreement and costs
+-P1 — Final report and presentation
+-Current evidence links and ownership missing
+-All four; coordinator [TO VERIFY]
+-Updated report, presentation, README and rehearsal
+-P2 — Optional enhancements
+-Live delivery, broader retrieval, alternate model
+-Only if approved
+-Documented extension without changing core scope
+-P0 items are blocking rubric requirements. P1 items improve credibility and reproducibility; P2 items are optional and must not compromise the documented simulated-delivery boundary. Assign each item using the team’s actual work allocation rather than inferred roles.
++P0 - Stakeholder follow-up
++No post-implementation meeting notes in supplied evidence
++Team to confirm liaison
++Dated notes, exact feedback, responses, final-deliverable sign-off
++P0 - Task success / FinQA
++P: 7/22 on A and 0/22 on B
++Shreya (evaluation code); team review
++Corrected fixed-case rerun and error analysis
++P0 - Injection content isolation
++Injected text relayed in 3/3 B1/P adversarial cases
++Team to assign
++Attack passages excluded; safety regression passes
++P0 - Recovery
++P recovered only 1/3 injected failures
++Asmi (replanning); team review
++At least 3/4 planned recovery target with traces
++P1 - Grounding quality
++A citation precision 76.9%; B 28.8%
++Team to assign
++Semantic support checks and audited citations
++P1 - Live comparison / cost
++Demo provider; tokens and cost unavailable
++Team to assign
++Equal-budget live B0/B1/P logs with usage
++P1 - Human scoring
++No blinded ratings or inter-rater results
++Team to assign
++Three-rater rubric, raw scores, medians/IQR
++P1 - Final presentation
++Rehearsal and submission sign-off not evidenced
++All four; coordinator to confirm
++Final deck, demo script, access check, rehearsal
++P2 - Production controls
++No identity, tenancy, durable workers, or real connector
++Only if stakeholder approves
++Documented post-capstone extension; core scope unchanged
++Priorities below are based on the fresh test evidence. Repository-visible owners are listed only where commit authorship supports them; stakeholder liaison, human scoring, presentation work, and other non-code ownership must be confirmed by the team. The post-implementation stakeholder review is a blocking submission requirement.
+ 7. GitHub Repository and Team Contributions
+-Original publicly accessible baseline: https://github.com/jadhav-kunal/ai-workforce-capstone. The repository currently exposes a main branch with baseline instructions and evidence. This does not establish the team submission branch. Final submission repository URL: [TO VERIFY team fork or upstream branch]. Branch: [TO VERIFY]. Full commit SHA: [TO VERIFY]. Grader access: [CHECK using logged-out browser or invited account].
++Submission repository: https://github.com/jadhav-kunal/ai-workforce-capstone.git. Branch tested: main. Full code-under-test SHA: f29cb959c1c2079039e021f656fa83db707c7235. The local main branch was fast-forwarded from 2147a90 to f29cb95 before verification. Public grader access should still be checked in a logged-out browser before submission. Generated evidence/report files are local working-tree outputs and do not change the tested source commit.
+ 7.1 Reproducible setup
+-The baseline README provides this quick-start procedure; verify/update it against the submitted branch and commit:
++Reproducible commands executed from the repository root:
+ git clone https://github.com/jadhav-kunal/ai-workforce-capstone.git
+-cd ai-workforce-capstone
+-python3 -m venv .venv
+-source .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
+-pip install -e ".[dev]"
+-workforce run "Analyze the AI support pilot evidence and prepare an action brief." --no-message
+-workforce serve  # dashboard: http://127.0.0.1:8000
+-pytest --cov=ai_workforce --cov-report=term-missing
+-Add the actual submission branch checkout, model environment settings, data setup, B0/B1/P evaluation commands and screenshots. Offline mode must remain runnable without an API key. Never include private keys in the repository.
++cd ai-workforce-capstone && git checkout main && git pull --ff-only origin main
++uv sync --extra dev
++uv run ruff check src tests
++uv run pytest --cov=ai_workforce --cov-report=term-missing
++uv run python scripts/collect_evidence.py
++uv run workforce eval --output artifacts/evaluation/milestone2-current
++uv run workforce eval --rescore artifacts/evaluation/milestone2-current
++Offline mode requires no API key. The evaluation output includes a manifest, raw JSONL traces, results.json, scores.csv, and summary.md. Live evaluation is billable and requires explicit provider credentials; no private keys belong in the repository. Current command results: Ruff pass, 65 tests pass, 91% coverage, 5/5 scenario checks, and 176 rescored test runs.
+ 7.2 Contributions and evidence
+ Team member
+-GitHub user / PR / commit evidence
+-Verified contributions
++GitHub user / commit evidence
++Verified repository-visible contributions
+ Manas Tole
+-[TO VERIFY username and links]
+-[ADD actual code, tests, datasets, stakeholder work and writing]
++manastole03; 65034a8; merge commits including f29cb95
++Core architecture refactor, planner/critic/memory/tool changes, documentation, evidence integration, PR merges.
+ Asmi Phulgam
+-[TO VERIFY username and links]
+-[ADD actual code, tests, datasets, stakeholder work and writing]
++asmipulgam; b397b46
++Bounded replanning after recoverable tool errors and workflow tests.
+ Shreya Kale
+-[TO VERIFY username and links]
+-[ADD actual code, tests, datasets, stakeholder work and writing]
++kaleshreya162001 / ShreyaK1601; 698b8de, 3f11e15, e469a52
++Evaluation runner/datasets, usage reporting, concurrency/idempotency tests, dashboard UI refactor and visual evidence.
+ Pratik Chaudhari
+-[TO VERIFY username and links]
+-[ADD actual code, tests, datasets, stakeholder work and writing]
+-Include contributions not visible in commits—dataset curation, annotation, manual scoring, stakeholder meetings, screenshots and manuscript preparation—with a short description of the produced artifact. Commit counts alone do not establish ownership.
++No commit attributed in current Git history
++Non-code or branch-local contributions require team-provided artifact links before submission.
++The table reports only Git-visible evidence. Dataset annotation, stakeholder work, manual scoring, screenshots, manuscript preparation, and presentation work must be confirmed by the team with links or artifacts; commit counts alone do not prove full ownership.
+ Conclusion
+-Milestone 1 defines a coherent transition from a safe but fixed workforce to a governed, adaptive agentic execution system. The baseline already offers a credible foundation in typed tools, durable state, exact-step approval and offline operation. Milestone 2 should be judged through the demonstrable behavior of the actual enhanced code: whether it chooses and validates plans, uses tool observations to recover, grounds the final brief, safely gates simulated messaging and remains reproducible. Those claims require current team-run traces and paired evaluation outputs. The report intentionally leaves unknown evidence explicit instead of converting planned mechanisms and targets into fabricated accomplishments.
++Milestone 2 establishes a working, testable governed agent workflow on latest main: typed dynamic plans are validated, failures are observed within bounded recovery, evidence and calculations are carried into structured claims, approval controls the exact consequential step, duplicate side effects are suppressed, and complete traces are reproducible offline. The measured evidence is deliberately narrower than a claim of superior intelligence. Safety and observability are strong, while task success, FinQA arithmetic, recovery, semantic grounding, injected-content isolation, live-model cost/quality, human evaluation, and stakeholder sign-off remain the work required for the final project.
+ References
+-[1] Team Milestone 1 report, “AI Workforce: From a Fixed Pipeline to a Governed, Self-Correcting Agent Team,” CSE 598, September 2026.
+-[2] K. R. Jadhav, AI Workforce baseline repository, https://github.com/jadhav-kunal/ai-workforce-capstone, accessed November 5, 2026.
+-[3] S. Yao et al., “ReAct: Synergizing Reasoning and Acting in Language Models,” arXiv:2210.03629, 2022.
+-[4] N. Shinn et al., “Reflexion: Language Agents with Verbal Reinforcement Learning,” arXiv:2303.11366, 2023.
+-[5] Q. Wu et al., “AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation,” arXiv:2308.08155, 2023.
++[1] Group 3, 'AI Workforce: From a Fixed Pipeline to a Governed, Self-Correcting Agent Team,' CSE 598 Milestone 1, September 2026.
++[2] K. R. Jadhav et al., AI Workforce repository, main commit f29cb959c1c2079039e021f656fa83db707c7235, accessed November 7, 2026, https://github.com/jadhav-kunal/ai-workforce-capstone.
++[3] Group 3, 'Evaluation results,' artifacts/evaluation/milestone2-current, regenerated November 7, 2026 from 176 offline test runs.
++[4] Z. Chen et al., 'FinQA: A Dataset of Numerical Reasoning over Financial Data,' EMNLP 2021; MIT-licensed project subset in datasets/finqa_pilot_v1.json.
++[5] S. Yao et al., 'ReAct: Synergizing Reasoning and Acting in Language Models,' arXiv:2210.03629, 2022; N. Shinn et al., 'Reflexion,' arXiv:2303.11366, 2023.

@@ -55,6 +55,7 @@
   --color-danger-ink: #781c1c;
   --color-danger-text: #771e1e;
   --color-danger-border: #bc8a8a;
+  --color-danger-surface: #fbeaea;
   --color-info-bg: #cfe3f1;
 
   /* Typography: families */
@@ -887,6 +888,166 @@ textarea.control-compact {
 }
 
 
+/* Run detail tabs (WAI-ARIA tabs pattern) */
+.detail-tabs {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-18);
+  border-bottom: var(--border-line);
+  overflow-x: auto;
+}
+
+.btn-tab {
+  background: transparent;
+  color: var(--color-muted);
+  padding: var(--space-10) var(--space-14);
+  font: var(--mono-10-medium);
+  letter-spacing: var(--tracking-small);
+  text-transform: uppercase;
+  border-bottom: var(--space-3) solid transparent;
+  white-space: nowrap;
+}
+
+.tab-panel {
+  padding-top: var(--space-6);
+}
+
+/* Run facts: planner source and budgets used */
+.run-facts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin: var(--space-18) 0 0;
+  background: var(--color-divider);
+  border: var(--border-divider);
+}
+
+.run-facts div {
+  background: var(--color-surface-raised);
+  padding: var(--space-8) var(--space-10);
+  min-width: 0;
+}
+
+.run-facts dt,
+.message-preview dt {
+  font: var(--mono-8-medium);
+  letter-spacing: var(--tracking-small);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.run-facts dd,
+.message-preview dd {
+  margin: var(--space-3) 0 0;
+  font: var(--mono-11);
+  word-break: break-word;
+}
+
+/* Action brief: cited claims with the critic's verdicts */
+.brief-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-14);
+}
+
+.brief h4 {
+  margin: 0;
+}
+
+.brief-head small {
+  font: var(--mono-10-semibold);
+  color: var(--color-success-ink);
+}
+
+.brief-byline {
+  margin: var(--space-4) 0 var(--space-12);
+  font: var(--mono-10);
+  color: var(--color-muted);
+}
+
+.claim-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.claim {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
+  border-top: var(--border-line);
+  font-size: var(--text-12);
+  line-height: 1.5;
+}
+
+.claim p {
+  margin: 0;
+  grid-column: 2;
+}
+
+.verdict {
+  grid-column: 1;
+  font: var(--mono-12-medium);
+}
+
+.chip {
+  display: inline-block;
+  padding: 0 var(--space-5);
+  background: var(--color-surface-chip);
+  font: var(--mono-9-medium);
+  letter-spacing: var(--tracking-badge);
+}
+
+.chip-calc {
+  background: var(--color-acid);
+}
+
+.recs {
+  margin: var(--space-12) 0 0;
+  font-size: var(--text-12);
+  color: var(--color-text-soft);
+}
+
+.quarantine {
+  margin-top: var(--space-12);
+  padding: var(--space-10) var(--space-12);
+  background: var(--color-warning-surface);
+  border-left: var(--space-4) solid var(--color-warning-border);
+  font-size: var(--text-12);
+}
+
+/* Approval gate: the exact message awaiting a decision */
+.message-preview {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-12);
+  margin: 0 0 var(--space-14);
+}
+
+.reflection {
+  color: var(--color-text-soft);
+  font-size: var(--text-12);
+}
+
+/* Audit events with expandable payloads */
+.event-payload summary {
+  cursor: pointer;
+  font: var(--mono-9-medium);
+}
+
+.event-payload pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: var(--mono-10-tall);
+  max-height: 280px;
+  overflow: auto;
+  background: var(--color-surface-sunken);
+  padding: var(--space-8);
+}
+
+
 /* 5. States
    ========================================================================== */
 
@@ -1016,6 +1177,46 @@ main:focus,
 }
 
 
+/* Provider badge: offline demo provider */
+.system-state.offline i {
+  background: var(--color-warning-border);
+  box-shadow: 0 0 0 var(--space-4) var(--color-warning-surface);
+}
+
+/* Run detail tabs */
+.btn-tab:hover {
+  color: var(--color-ink);
+}
+
+.btn-tab[aria-selected="true"] {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+
+.btn-tab:focus-visible {
+  outline-offset: calc(var(--space-3) * -1);
+  box-shadow: none;
+}
+
+/* Critic verdicts */
+.claim-ok .verdict {
+  color: var(--color-success-ink);
+}
+
+.claim-bad {
+  background: var(--color-danger-surface);
+}
+
+.claim-bad .verdict {
+  color: var(--color-danger-text);
+}
+
+.approval .btn:disabled {
+  opacity: .6;
+  cursor: progress;
+}
+
+
 /* 6. Responsive
    ========================================================================== */
 
@@ -1036,8 +1237,13 @@ main:focus,
   }
 
   .input-grid,
-  .result-grid {
+  .result-grid,
+  .message-preview {
     grid-template-columns: 1fr;
+  }
+
+  .run-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .workspace {

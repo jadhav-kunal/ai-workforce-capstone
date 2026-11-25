@@ -1,4 +1,11 @@
-const state = { selected: new URLSearchParams(window.location.search).get('run'), poll: null, lastStatus: {} };
+const state = {
+  selected: new URLSearchParams(window.location.search).get('run'),
+  poll: null,
+  lastStatus: {},
+  detailTab: 'summary',
+  run: null,
+};
+const TABS = [['summary', 'Summary'], ['artifacts', 'Artifacts'], ['audit', 'Audit history']];
 const $ = (selector) => document.querySelector(selector);
 
 async function api(path, options = {}) {
@@ -37,6 +44,23 @@ function parseSources(value) {
     if (separator < 0) return { title: `Source ${index + 1}`, content: line };
     return { title: line.slice(0, separator).trim(), content: line.slice(separator + 1).trim() };
   });
+}
+
+// Header badge: which provider answers model calls (live model or the scripted offline demo).
+async function loadHealth() {
+  const node = $('#system-state');
+  try {
+    const health = await api('/health');
+    const live = health.provider !== 'demo';
+    node.classList.toggle('offline', !live);
+    $('#provider-label').textContent = live ? `LIVE MODEL · ${health.model}` : 'OFFLINE DEMO PROVIDER';
+    node.title = live
+      ? 'Planning and critic calls go to a live model.'
+      : 'Deterministic scripted provider: no model calls, results measure orchestration only.';
+  } catch {
+    node.classList.add('offline');
+    $('#provider-label').textContent = 'API UNREACHABLE';
+  }
 }
 
 async function loadMetrics() {
@@ -84,42 +108,140 @@ async function selectRun(id, { focus = false } = {}) {
   if (transient) schedulePoll(); else clearTimeout(state.poll);
 }
 
-function renderDetail(run) {
-  const waiting = run.plan.find(step => step.status === 'waiting_approval');
+// Latest output of the first step that used a tool (step outputs are live while a run is paused).
+const stepOutput = (run, tool) => run.plan.find(step => step.tool === tool && step.output && !step.output.error)?.output;
+
+function renderTimeline(run) {
   const plan = run.plan.map((step, index) => `
     <div class="step ${esc(step.status)}" role="listitem">
       <span class="step-dot" aria-hidden="true">${step.status === 'completed' ? '✓' : step.status === 'waiting_approval' ? '!' : index + 1}</span>
       <div><h4>${esc(step.title)} <span class="step-status">${esc(label(step.status))}</span></h4><p>${esc(step.agent)} · ${esc(step.tool)} · ${esc(step.risk)} risk${Object.keys(step.arguments || {}).length ? ` · ${esc(JSON.stringify(step.arguments))}` : ''}</p></div>
     </div>`).join('');
-  const approval = waiting ? `<div class="panel approval" role="group" aria-labelledby="approval-title"><p><strong id="approval-title">Human decision required.</strong><br>This step creates an external-facing artifact in the simulated outbox.</p><button class="btn btn-solid" type="button" data-approve="true">Approve &amp; continue</button><button class="btn btn-danger" type="button" data-approve="false">Reject</button></div>` : '';
-  const calculation = run.result?.artifacts?.find(item => Object.hasOwn(item, 'value'));
-  const research = run.result?.artifacts?.find(item => item.findings);
-  const message = run.result?.artifacts?.find(item => item.message);
+  return `<div class="timeline" role="list" aria-label="Plan steps">${plan || '<p class="empty">Planning…</p>'}</div>`;
+}
+
+function renderRunFacts(run) {
+  const context = run.context || {};
+  const lessons = context.delegation?.prior_lessons?.length || 0;
+  const facts = [
+    ['Planner', label(context._plan_source || 'pending')],
+    ['Lessons recalled', lessons],
+    ['Step attempts', `${context._step_attempts || 0} / 8`],
+    ['Replans', `${context._replans || 0} / 2`],
+    ['Writer revisions', `${context._revisions || 0} / 1`],
+  ];
+  return `<dl class="run-facts">${facts.map(([name, value]) => `<div><dt>${esc(name)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
+}
+
+// The writer's brief with the critic's verdict on every claim, as the approver sees it.
+function renderBrief(run) {
+  const brief = stepOutput(run, 'content.synthesize')?.deliverable;
+  if (!brief) return '';
+  const review = run.context?._draft_review || run.result?.review?.grounding;
+  const verdicts = review?.claim_verdicts || [];
+  const claims = (brief.claims || []).map((claim, index) => {
+    const verdict = verdicts[index];
+    const text = String(claim.text || '').replace(/\s*\[[^\]]+\]/g, '');
+    const chips = (claim.citations || []).map(id => `<span class="chip ${id === 'CALC' ? 'chip-calc' : ''}">${esc(id)}</span>`).join('');
+    const mark = verdict ? (verdict.supported ? '<span class="verdict" aria-hidden="true">✓</span>' : '<span class="verdict" aria-hidden="true">✗</span>') : '';
+    const status = verdict ? `<span class="sr-only">${verdict.supported ? 'Verified' : 'Rejected'}: </span>` : '';
+    return `<li class="claim ${verdict ? (verdict.supported ? 'claim-ok' : 'claim-bad') : ''}" title="${esc(verdict?.reason || '')}">${mark}<p>${status}${esc(text)} ${chips}</p></li>`;
+  }).join('');
+  const supported = verdicts.filter(item => item.supported).length;
+  const quarantined = brief.quarantined_sources || [];
+  const quarantine = quarantined.length ? `<div class="quarantine" role="note"><b>${quarantined.length} source${quarantined.length > 1 ? 's' : ''} quarantined</b> and kept out of the brief: ${quarantined.map(item => `${esc(item.id)} (${esc(item.reasons.join('; '))})`).join(', ')}.</div>` : '';
+  return `<section class="panel brief" aria-labelledby="brief-title">
+    <div class="brief-head"><h4 id="brief-title">Action brief</h4><small>${review ? `Critic verified ${supported} / ${verdicts.length} claims` : 'Awaiting critic review'}</small></div>
+    <p class="brief-byline">Written by the writer, checked by the critic against the cited passages and the calculator.</p>
+    <ul class="claim-list">${claims}</ul>
+    ${brief.recommendations?.length ? `<p class="recs"><b>Recommends:</b> ${esc(brief.recommendations.join(' '))}</p>` : ''}
+    ${quarantine}
+  </section>`;
+}
+
+function renderApproval(run, waiting) {
+  if (!waiting) return '';
+  const args = waiting.arguments || {};
+  return `<div class="panel approval" role="group" aria-labelledby="approval-title">
+    <p><strong id="approval-title">Human decision required.</strong><br>This step creates an external-facing artifact in the simulated outbox. Nothing is sent until you approve this exact step.</p>
+    <dl class="message-preview">
+      <div><dt>Channel</dt><dd>${esc(args.channel || 'email')}</dd></div>
+      <div><dt>To</dt><dd>${esc(args.recipient || 'default reviewer')}</dd></div>
+      <div><dt>Subject</dt><dd>${esc(args.subject || 'AI Workforce action brief')}</dd></div>
+    </dl>
+    <button class="btn btn-solid" type="button" data-approve="true">Approve &amp; continue</button><button class="btn btn-danger" type="button" data-approve="false">Reject</button>
+  </div>`;
+}
+
+function renderResult(run) {
+  if (!run.result) return run.error ? `<div class="panel result"><h4>Run error</h4><p>${esc(run.error)}</p></div>` : '';
+  const calculation = run.result.artifacts?.find(item => Object.hasOwn(item, 'value'));
+  const research = run.result.artifacts?.find(item => item.findings);
+  const message = run.result.artifacts?.find(item => item.message);
   const evidence = research?.findings?.map((item, index) => `<li><b>${esc(item.id || `S${index + 1}`)}</b> ${esc(item.title)}</li>`).join('') || '';
-  const execution = run.result?.execution;
-  const result = run.result ? `<div class="panel result">
+  const execution = run.result.execution;
+  return `<div class="panel result">
     <div class="result-head"><h4>Verified run result</h4><strong>${Math.round(run.result.review.quality_score * 100)}% grounding score</strong></div>
     <div class="result-grid">
       <div><small>EVIDENCE</small><b>${research?.source_count || 0} supplied passages</b>${evidence ? `<ul>${evidence}</ul>` : ''}</div>
       <div><small>CALCULATION</small><b>${calculation ? `${esc(calculation.expression)} = ${esc(calculation.value)}` : 'Not requested'}</b></div>
-      <div><small>POLICY OUTCOME</small><b>${message ? `Approved · ${esc(message.message.delivery)} only` : 'No outbound artifact'}</b></div>
+      <div><small>POLICY OUTCOME</small><b>${message ? `Approved · ${esc(message.message.delivery)} only · ${esc(message.message.id)}` : 'No outbound artifact'}</b></div>
     </div>
-    ${execution ? `<p><b>Execution:</b> ${esc(execution.planner)} planner · ${esc(execution.step_attempts)} attempts · ${esc(execution.replans)} replans · ${esc(execution.draft_revisions)} revisions</p>` : ''}
-    <p>${esc(run.result.review.reflection)}</p>
-    <details><summary>Exact artifact JSON</summary><pre>${esc(JSON.stringify(run.result.artifacts, null, 2))}</pre></details>
-  </div>` : (run.error ? `<div class="panel result"><h4>Run error</h4><p>${esc(run.error)}</p></div>` : '');
-  const events = run.events?.length ? `<details class="panel events"><summary>Audit event history · ${run.events.length} events</summary><ol>${run.events.map(event => `<li><time datetime="${esc(event.created_at)}">${esc(new Date(event.created_at).toLocaleTimeString())}</time><b>${esc(event.type)}</b><span>${esc(event.actor)}</span></li>`).join('')}</ol></details>` : '';
+    ${execution ? `<p><b>Execution:</b> ${esc(label(execution.planner))} planner · ${esc(execution.step_attempts)} attempts · ${esc(execution.replans)} replans · ${esc(execution.draft_revisions)} revisions</p>` : ''}
+    <p class="reflection">${esc(run.result.review.reflection)}</p>
+  </div>`;
+}
+
+function renderArtifacts(run) {
+  const outputs = run.plan.filter(step => step.output).map(step => ({ step: step.title, tool: step.tool, status: step.status, output: step.output }));
+  if (!outputs.length) return `<p class="empty">${run.error ? esc(run.error) : 'No tool outputs yet for this run.'}</p>`;
+  return `<div class="panel result"><h4>Exact tool outputs</h4><pre>${esc(JSON.stringify(outputs, null, 2))}</pre></div>`;
+}
+
+function renderAudit(run) {
+  if (!run.events?.length) return '<p class="empty">No audit events recorded yet.</p>';
+  return `<div class="panel events"><h4>Audit history · ${run.events.length} events</h4><ol>${run.events.map(event => `
+    <li><time datetime="${esc(event.created_at)}">${esc(new Date(event.created_at).toLocaleTimeString())}</time><details class="event-payload"><summary>${esc(event.type)}</summary><pre>${esc(JSON.stringify(event.payload, null, 2))}</pre></details><span>${esc(event.actor)}</span></li>`).join('')}</ol></div>`;
+}
+
+function renderDetail(run) {
+  state.run = run;
+  const waiting = run.plan.find(step => step.status === 'waiting_approval');
+  const active = TABS.some(([key]) => key === state.detailTab) ? state.detailTab : 'summary';
+  const panels = {
+    summary: () => `${renderApproval(run, waiting)}${renderRunFacts(run)}${renderTimeline(run)}${renderBrief(run)}${renderResult(run)}`,
+    artifacts: () => renderArtifacts(run),
+    audit: () => renderAudit(run),
+  };
   $('#detail').innerHTML = `
     <div class="detail-top"><div><span class="run-id">${esc(run.id)}</span><h3 id="detail-title" tabindex="-1">${esc(run.objective)}</h3></div><span class="badge ${esc(run.status)}"><span class="sr-only">Status: </span>${esc(label(run.status))}</span></div>
-    <div class="timeline" role="list" aria-label="Plan steps">${plan || '<p class="empty">Planning…</p>'}</div>${approval}${result}${events}`;
+    <div class="detail-tabs" role="tablist" aria-label="Run detail sections">${TABS.map(([key, name]) => `
+      <button class="btn btn-tab" type="button" role="tab" id="tab-${key}" aria-controls="panel-${key}" aria-selected="${key === active}" tabindex="${key === active ? 0 : -1}" data-tab="${key}">${esc(name)}${key === 'audit' && run.events?.length ? ` · ${run.events.length}` : ''}</button>`).join('')}
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panel-${active}" aria-labelledby="tab-${active}" tabindex="0">${panels[active]()}</div>`;
+  const tabs = [...document.querySelectorAll('.detail-tabs [role="tab"]')];
+  const activate = (index) => { state.detailTab = tabs[index].dataset.tab; renderDetail(run); $(`#tab-${state.detailTab}`).focus(); };
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => activate(index));
+    // WAI-ARIA tabs pattern: arrows move between tabs, Home/End jump to the ends.
+    tab.addEventListener('keydown', (event) => {
+      const next = { ArrowRight: (index + 1) % tabs.length, ArrowLeft: (index - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1 }[event.key];
+      if (next === undefined) return;
+      event.preventDefault(); activate(next);
+    });
+  });
   document.querySelectorAll('[data-approve]').forEach(button => button.addEventListener('click', () => resolveApproval(run.id, waiting.id, button.dataset.approve === 'true')));
 }
 
 async function resolveApproval(runId, stepId, approved) {
+  document.querySelectorAll('[data-approve]').forEach(button => { button.disabled = true; });
   try {
     await api(`/api/runs/${runId}/approval`, { method:'POST', body:JSON.stringify({ step_id:stepId, approved }) });
     await Promise.all([loadRuns(), loadMetrics()]); await selectRun(runId, { focus: true }); toast(approved ? 'Action approved and completed' : 'Action rejected');
-  } catch (error) { toast(error.message, true); }
+  } catch (error) {
+    toast(error.message, true);
+    document.querySelectorAll('[data-approve]').forEach(button => { button.disabled = false; });
+  }
 }
 
 function schedulePoll() { clearTimeout(state.poll); state.poll = setTimeout(() => selectRun(state.selected), 800); }
@@ -234,6 +356,7 @@ $('#refresh').addEventListener('click', () => {
   announce('Refreshing run log…');
   Promise.all([loadRuns(), loadMetrics()]).then(() => announce('Run log refreshed')).catch(error => toast(error.message, true));
 });
+loadHealth();
 Promise.all([loadRuns(), loadMetrics()])
   .then(() => state.selected && selectRun(state.selected))
   .catch(error => toast(error.message, true));
